@@ -27,7 +27,7 @@ export default function SystemPrompts() {
       }
     };
     fetchData();
-  }, [session?.user?.id]);
+  }, [session?.user?.id, systemPrompts]);
 
   const handleDelete = async (name: string) => {
     if (!session?.user?.id) {
@@ -71,13 +71,8 @@ export default function SystemPrompts() {
 
   const handleOnAddNewPrompt = (newPrompt: Prompt) => {
     setSystemPrompts((prev) => [
-      {
-        id: newPrompt.id,
-        name: newPrompt.name,
-        prompt: newPrompt.prompt,
-        is_active: newPrompt.is_active,
-      },
       ...prev,
+      newPrompt,
     ]);
   };
 

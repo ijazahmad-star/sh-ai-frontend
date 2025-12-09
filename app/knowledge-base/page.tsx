@@ -99,8 +99,6 @@ export default function KnowledgeBasePage() {
           const contentType = res.headers.get('content-type');
           if (contentType && contentType.includes('application/json')) {
             const error = await res.json();
-            // FastAPI HTTPException returns error in 'detail' field
-            // Use optional chaining to safely access properties
             errorMessage = error?.detail || error?.message || errorMessage;
           } else {
             const text = await res.text();
@@ -114,7 +112,7 @@ export default function KnowledgeBasePage() {
         setUploadMessage({ type: 'error', text: errorMessage });
       }
 
-      setTimeout(() => setUploadMessage(null), 5000);
+    //   setTimeout(() => setUploadMessage(null), 5000);
       event.target.value = '';
     } catch (error) {
       console.error('File upload error:', error);

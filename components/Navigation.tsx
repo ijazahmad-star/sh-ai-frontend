@@ -24,6 +24,9 @@ export default function Navigation() {
           <Link href="/prompts/system-prompts" className="text-white hover:underline">
             System Prompts
           </Link>
+          <Link href="/knowledge-base" className="text-white hover:underline">
+            Knowledge Base
+          </Link>
           <Link href="/chat" className="text-white hover:underline">
             Chat
           </Link>

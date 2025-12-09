@@ -143,27 +143,4 @@ export const getAiResponse = async (
   }
 }
 
-export const uploadFile = async (
-  file: File
-): Promise<{ status: string; filename?: string; error?: string }> => {
-  try {
-    const formData = new FormData();
-    formData.append('file', file);
-
-    const res = await fetch(`${API_BASE}/upload`, {
-      method: 'POST',
-      body: formData,
-    });
-
-    if (!res.ok) {
-      console.error("Failed to upload file", res.status);
-      return { status: 'failed', error: 'Upload request failed' };
-    }
-
-    const data = await res.json();
-    return data;
-  } catch (e) {
-    console.error("uploadFile:", e);
-    return { status: 'failed', error: String(e) };
-  }
-}
+// uploadFile function removed - upload is now handled in Knowledge Base page

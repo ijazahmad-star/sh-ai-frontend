@@ -24,3 +24,63 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+:root {
+  --primary-500: #dc2626;
+  --primary-600: #b91c1c;
+  --primary-700: #991b1b;
+  --muted-700: #475569;
+}
+
+/* Simple centered container to match many marketing layouts */
+.container {
+  max-width: 1100px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+/* Small utilities for hero and cards (tailwind is available; these are fallbacks) */
+.hero {
+  background: linear-gradient(180deg, rgba(250,250,250,1) 0%, rgba(243,244,246,1) 100%);
+}
+
+.card {
+  background: var(--background);
+  border-radius: 0.75rem;
+  box-shadow: 0 6px 18px rgba(15,23,42,0.06);
+}
+
+.btn-primary {
+  background-color: var(--primary-600);
+  color: white;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+}
+
+.btn-primary:hover {
+  background-color: var(--primary-700);
+}
+
+.btn-secondary {
+  background-color: #f3f4f6;
+  color: #374151;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  border: 1px solid #e5e7eb;
+}
+
+.btn-secondary:hover {
+  background-color: #e5e7eb;
+  border-color: #d1d5db;
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--muted-700);
+  padding: 0.5rem 0.6rem;
+  border-radius: 0.5rem;
+}

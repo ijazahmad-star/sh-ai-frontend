@@ -5,14 +5,21 @@ import ReactMarkdown from "react-markdown";
 import { getAiResponse } from "@/lib/prompts";
 import type { Message, Source, Conversation } from "@/types/chat";
 
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
+
 export default function ChatInterface() {
   const { data: session } = useSession();
   const [query, setQuery] = useState("");
-  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
+  const [currentConversationId, setCurrentConversationId] = useState<
+    string | null
+  >(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(false);
+  const [kbType, setKbType] = useState<"default" | "custom">("default");
+  const [hasPersonalKB, setHasPersonalKB] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  // const [initialLoading, setInitialLoading] = useState(true);
 
   // Auto-scroll to bottom when messages change
   const scrollToBottom = () => {
@@ -27,10 +34,31 @@ export default function ChatInterface() {
   useEffect(() => {
     if (session?.user) {
       loadConversations();
+      checkUserKB();
     }
   }, [session]);
 
+  // Check if user has personal KB
+  const checkUserKB = async () => {
+    if (!session?.user?.id) return;
+
+    try {
+      const res = await fetch(`${API_BASE}/check_user_kb/${session.user.id}`);
+      if (res.ok) {
+        const data = await res.json();
+        setHasPersonalKB(data.has_personal_kb || false);
+        // If user doesn't have personal KB, force default
+        if (!data.has_personal_kb) {
+          setKbType("default");
+        }
+      }
+    } catch (e) {
+      console.error("Failed to check user KB:", e);
+    }
+  };
+
   const loadConversations = async () => {
+    // setInitialLoading(true);
     try {
       const res = await fetch("/api/chat/conversations");
       if (res.ok) {
@@ -40,6 +68,7 @@ export default function ChatInterface() {
     } catch (e) {
       console.error("Failed to load conversations:", e);
     }
+    // setInitialLoading(false);
   };
 
   const loadConversation = async (conversationId: string) => {
@@ -62,7 +91,7 @@ export default function ChatInterface() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title: "New Chat" }),
       });
-      
+
       if (res.ok) {
         const conversation = await res.json();
         setCurrentConversationId(conversation.id);
@@ -76,7 +105,7 @@ export default function ChatInterface() {
     return null;
   };
 
-  const saveMessage = async (conversationId: string, role: string, content: string) => {
+  const saveMessage = async (conversationId: string, role: string, content: string, sources: Source[] = []) => {
     try {
       await fetch("/api/chat/messages", {
         method: "POST",
@@ -85,6 +114,7 @@ export default function ChatInterface() {
           conversationId,
           role,
           content,
+          sources,
         }),
       });
     } catch (e) {
@@ -96,8 +126,7 @@ export default function ChatInterface() {
     if (query.trim() === "" || !session?.user?.id) return;
 
     let conversationId = currentConversationId;
-    const isFirstMessage = messages.length === 0; // Track if this is first message
-    
+    const isFirstMessage = messages.length === 0;
     // Create new conversation if none exists
     if (!conversationId) {
       conversationId = await createNewConversation();
@@ -111,35 +140,42 @@ export default function ChatInterface() {
     };
 
     setMessages((m) => [...m, userMessage]);
-    const userQuery = query.trim(); // Store query before clearing
+    const userQuery = query.trim();
     setQuery("");
     setLoading(true);
 
-    // Save user message (don't wait for it - runs in background)
     saveMessage(conversationId, "user", userMessage.content);
 
     try {
-      const response = await getAiResponse(userMessage.content, session.user.id);
+      // Get AI response
+      const response = await getAiResponse(
+        userMessage.content,
+        session.user.id,
+        kbType
+      );
+
+      // AI message with sources
       const aiMessage: Message = {
         id: String(Date.now()) + "-a",
         role: "assistant",
         content: response?.response ?? "(no response)",
-        sources: response?.sources || [],
+        sources: response?.sources?.map((s) => s.source) || [],
       };
+
       setMessages((m) => [...m, aiMessage]);
-      
-      // ✅ FIX 1: Set loading to false immediately after showing response
       setLoading(false);
-      
-      // Save AI message (don't wait for it - runs in background)
-      saveMessage(conversationId, "assistant", aiMessage.content);
-      
-      // ✅ FIX 2: Generate smart title from first message
+      // const sources: string[] =
+      //   response?.sources?.map((s: Source) => s.source) || [];
+      // Save AI message along with sources
+      saveMessage(conversationId, "assistant", aiMessage.content, aiMessage.sources);
+      // saveMessage(conversationId, "assistant", aiMessage.content, aiMessage.sources?.map((s) => s.source) || []);
+
+      // Update conversation title if first message
       if (isFirstMessage) {
         await updateConversationTitle(conversationId, userQuery);
       }
-      
-      // Reload conversations to update list (async, doesn't block UI)
+
+      // Reload conversation list
       loadConversations();
     } catch (e) {
       const errMessage: Message = {
@@ -148,18 +184,18 @@ export default function ChatInterface() {
         content: "Error: could not get response",
       };
       setMessages((m) => [...m, errMessage]);
-      setLoading(false); // Set loading false on error too
+      setLoading(false);
     }
   };
 
   const deleteConversation = async (id: string) => {
     if (!confirm("Delete this conversation?")) return;
-    
+
     try {
       const res = await fetch(`/api/chat/conversations/${id}`, {
         method: "DELETE",
       });
-      
+
       if (res.ok) {
         if (currentConversationId === id) {
           setCurrentConversationId(null);
@@ -172,29 +208,32 @@ export default function ChatInterface() {
     }
   };
 
-  const updateConversationTitle = async (conversationId: string, firstMessage: string) => {
+  const updateConversationTitle = async (
+    conversationId: string,
+    firstMessage: string
+  ) => {
     try {
       // Generate a smart title from first message (first 50 chars or first sentence)
       let title = firstMessage.trim();
-      
+
       // Take first sentence if it ends with punctuation
       const firstSentence = title.match(/^[^.!?]+[.!?]/);
       if (firstSentence) {
         title = firstSentence[0].trim();
       }
-      
+
       // Limit to 50 characters
       if (title.length > 50) {
         title = title.substring(0, 47) + "...";
       }
-      
+
       // Update the conversation title
       const res = await fetch(`/api/chat/conversations/${conversationId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title }),
       });
-      
+
       if (res.ok) {
         // Reload conversations to show new title
         loadConversations();
@@ -204,12 +243,20 @@ export default function ChatInterface() {
     }
   };
 
-
   const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     await handleSubmit();
   };
 
+  // if (initialLoading) {
+  //   return (
+  //     <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm/90">
+  //       <div className="text-gray-700 dark:text-gray-300 animate-pulse text-lg font-semibold">
+  //         Loading chats...
+  //       </div>
+  //     </div>
+  //   );
+  // }
   return (
     <div className="flex h-screen bg-white dark:bg-zinc-900">
       {/* Sidebar with conversation history */}
@@ -222,7 +269,6 @@ export default function ChatInterface() {
             + New Chat
           </button>
         </div>
-        
         <div className="px-2">
           <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 px-3 mb-2">
             Chat History
@@ -309,7 +355,7 @@ export default function ChatInterface() {
                             className="bg-white dark:bg-zinc-800 p-2 rounded border border-gray-200 dark:border-zinc-600"
                           >
                             <p className="text-xs font-medium text-blue-600 dark:text-blue-400 break-all">
-                              {source.source}
+                              {String(source)}
                             </p>
                           </div>
                         ))}
@@ -340,6 +386,21 @@ export default function ChatInterface() {
               className="flex-1 px-3 py-2 rounded-md border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
               placeholder="Type your question..."
             />
+
+            {/* KB Type Dropdown */}
+            {hasPersonalKB && (
+              <select
+                value={kbType}
+                onChange={(e) =>
+                  setKbType(e.target.value as "default" | "custom")
+                }
+                className="px-3 py-2 rounded-md border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                disabled={loading}
+              >
+                <option value="default">SH DB</option>
+                <option value="custom">Custom DB</option>
+              </select>
+            )}
 
             <button
               type="submit"

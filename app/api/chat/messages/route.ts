@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    const { conversationId, role, content } = await req.json();
+    const { conversationId, role, content, sources } = await req.json();
 
     // Verify user owns this conversation
     const conversation = await prisma.conversation.findFirst({
@@ -40,6 +40,7 @@ export async function POST(req: NextRequest) {
         userId: user.id,
         role,
         content,
+        sources: sources || [],
       },
     });
 

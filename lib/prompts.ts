@@ -119,13 +119,18 @@ export const getActivePrompt = async (userId: string): Promise<Prompt | null> =>
 
 export const getAiResponse = async (
   query: string,
-  userId: string
+  userId: string,
+  kbType: "default" | "custom" = "default"
 ): Promise<{ response: string; sources: any[] } | null> => {
   try {
     const res = await fetch(`${API_BASE}/query`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ query, user_id: userId }),
+      body: JSON.stringify({ 
+        query, 
+        user_id: userId,
+        kb_type: kbType 
+      }),
     });
 
     if (!res.ok) {

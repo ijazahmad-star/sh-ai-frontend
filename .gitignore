@@ -42,4 +42,4 @@ next-env.d.ts
 
 /lib/generated/prisma
 
-/scripts/create-admin.ts
+scripts/create-admin.ts

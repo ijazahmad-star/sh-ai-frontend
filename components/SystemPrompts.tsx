@@ -27,7 +27,7 @@ export default function SystemPrompts() {
       }
     };
     fetchData();
-  }, [session?.user?.id, systemPrompts]);
+  }, [session?.user?.id]);
 
   const handleDelete = async (name: string) => {
     if (!session?.user?.id) {

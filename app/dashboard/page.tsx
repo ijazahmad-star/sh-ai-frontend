@@ -1,9 +1,10 @@
-import { getServerSession } from "next-auth"
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import Navigation from "@/components/Navigation";
 import Link from "next/link";
 
 export default async function DashboardPage() {
-  const session = await getServerSession();
+  const session = await getServerSession(authOptions);
   if (!session) {
     return (
       <div className="min-h-screen flex items-center justify-center from-white to-zinc-50 dark:from-black dark:to-zinc-900 font-sans">
@@ -14,7 +15,10 @@ export default async function DashboardPage() {
           <p className="mt-3 text-gray-600 dark:text-gray-300">
             You must be signed in to view the dashboard.
           </p>
-          <Link href="/" className="mt-6 inline-block px-6 py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white transition-all text-sm font-semibold shadow-sm">
+          <Link
+            href="/"
+            className="mt-6 inline-block px-6 py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white transition-all text-sm font-semibold shadow-sm"
+          >
             Sign In
           </Link>
         </div>

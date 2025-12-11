@@ -3,9 +3,10 @@ import Link from "next/link";
 import ChatInterface from "@/components/chat/ChatInterface";
 import Navigation from "@/components/Navigation";
 import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
 
 export default async function ChatPage() {
-  const session = await getServerSession();
+  const session = await getServerSession(authOptions);
   if (!session) {
     return (
       <div className="min-h-screen flex items-center justify-center from-white to-zinc-50 dark:from-black dark:to-zinc-900 font-sans">

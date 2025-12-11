@@ -7,21 +7,34 @@ export default function Navigation() {
   const { data: session } = useSession();
   const handleSignOut = async () => {
     await signOut({ callbackUrl: "/" });
-  }
+  };
   return (
-    <div className="p-6 w-full border-b border-gray-200 dark:border-zinc-800" style={{ backgroundColor: 'rgb(11, 0, 44)' }}>
+    <div
+      className="p-6 w-full border-b border-gray-200 dark:border-zinc-800"
+      style={{ backgroundColor: "rgb(11, 0, 44)" }}
+    >
       <header className="flex justify-between items-center">
         <div className="text-2xl font-bold text-white">
           <span className="text-red-600">SH</span> AI Assistant
         </div>
         <div className="flex gap-6 items-center">
-          {/* <Link href="/" className="hover:underline text-gray-700 dark:text-gray-300">
-            Home
-          </Link> */}
           <Link href="/dashboard" className="text-white hover:underline">
             Dashboard
           </Link>
-          <Link href="/prompts/system-prompts" className="text-white hover:underline">
+
+          {session?.user?.role === "admin" && (
+            <Link
+              href="/admin/users"
+              className="text-yellow-300 hover:underline font-semibold"
+            >
+              Manage Users
+            </Link>
+          )}
+
+          <Link
+            href="/prompts/system-prompts"
+            className="text-white hover:underline"
+          >
             System Prompts
           </Link>
           <Link href="/knowledge-base" className="text-white hover:underline">
@@ -30,12 +43,12 @@ export default function Navigation() {
           <Link href="/chat" className="text-white hover:underline">
             Chat
           </Link>
-          
+
           {session?.user && (
             <div className="flex items-center gap-4">
               <div className="flex items-center text-white gap-2 hover:underline">
                 <span className="text-sm text-white">
-                  {session.user.name}
+                  {session.user.name} ({session.user.role})
                 </span>
                 {session.user.image && (
                   <img

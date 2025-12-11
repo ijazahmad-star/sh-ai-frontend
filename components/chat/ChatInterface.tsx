@@ -19,6 +19,7 @@ export default function ChatInterface() {
   const [kbType, setKbType] = useState<"default" | "custom">("default");
   const [hasPersonalKB, setHasPersonalKB] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [hasAccessToDefaultKB, setHasAccessToDefaultKB] = useState(false);
   // const [initialLoading, setInitialLoading] = useState(true);
 
   // Auto-scroll to bottom when messages change
@@ -38,6 +39,20 @@ export default function ChatInterface() {
     }
   }, [session]);
 
+  const checkUserHasAccessToDefaultKB = async () => {
+    if (!session?.user?.id) return;
+
+    try {
+      const res = await fetch(`${API_BASE}/check_user_has_access_to_default_kb/${session.user.id}`);
+      if (res.ok) {
+        const data = await res.json();
+        setHasAccessToDefaultKB(data.has_access_to_default_kb || false);
+      }
+    }
+    catch (e) {
+      console.error("Failed to check user has access to default KB:", e);
+    }
+  };
   // Check if user has personal KB
   const checkUserKB = async () => {
     if (!session?.user?.id) return;

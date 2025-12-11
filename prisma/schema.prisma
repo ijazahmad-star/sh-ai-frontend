@@ -7,18 +7,32 @@ datasource db {
 }
 
 model User {
-  id            String         @id @default(cuid())
-  email         String         @unique
+  id            String        @id @default(uuid()) @db.Uuid  
+  email         String        @unique
   password      String?
   name          String?
   image         String?
+  role          String        @default("user")
   emailVerified DateTime?
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
   conversations Conversation[]
   messages      Message[]
+  kbAccess      KBAccess?
+  prompts       Prompts[]
 
   @@map("users")
+}
+
+model KBAccess {
+  id                   String   @id @default(cuid())
+  userId               String   @unique
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  hasAccessToDefaultKB Boolean  @default(false)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@map("kb_access")
 }
 
 model Conversation {
@@ -40,7 +54,7 @@ model Message {
   userId         String
   role           String
   content        String
-  sources        Json? 
+  sources        Json?
   createdAt      DateTime     @default(now())
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -48,4 +62,17 @@ model Message {
   @@index([conversationId])
   @@index([userId])
   @@map("messages")
+}
+
+model Prompts {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String?  
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  prompt    String   @db.Text
+  createdAt DateTime @default(dbgenerated("now()")) @db.Timestamptz
+  updatedAt DateTime @default(dbgenerated("now()")) @db.Timestamptz
+  isActive  Boolean?
+  name      String?  @db.Text
+
+  @@map("prompts")
 }

@@ -4,6 +4,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Navigation from "@/components/Navigation";
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
 
 interface User {
   id: string;
@@ -120,6 +121,45 @@ export default function AdminUsersPage() {
     return null;
   }
 
+  const handleDeleteUser = async (userId: string) => {
+    if (!confirm("Are you sure you want to delete this user?")) return;
+
+    // delete its corresponding vectors
+    try {
+      const res = await fetch(
+        `${API_BASE}/delete_user_document/${userId}`,
+        { method: 'DELETE' }
+      );
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Failed to delete user documents");
+        return;
+      }
+    } catch (error) {
+      setError("Error in deleting embedding");
+    }
+
+    // delete user...
+    try {
+      const res = await fetch(`/api/admin/users/${userId}/delete-user`, {
+        method: "DELETE",
+      });
+  
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Failed to delete user");
+        return;
+      }
+  
+      setSuccess("User deleted successfully");
+      await loadUsers();
+      setTimeout(() => setSuccess(""), 3000);
+    } catch (e) {
+      setError("Something went wrong");
+    }
+  };
+  
+
   return (
     <div className="min-h-screen py-4 bg-white dark:bg-black">
       <Navigation />
@@ -227,6 +267,7 @@ export default function AdminUsersPage() {
                       </td>
                       <td className="px-4 py-3 text-sm">
                         {user.role !== "admin" && (
+                          <>
                           <button
                             onClick={() =>
                               handleToggleDefaultKB(
@@ -245,6 +286,13 @@ export default function AdminUsersPage() {
                               : "Grant"}{" "}
                             KB
                           </button>
+                            <button
+                            onClick={() => handleDeleteUser(user.id)}
+                            className="px-3 py-1 rounded text-xs font-semibold bg-red-600 text-white hover:bg-red-700"
+                          >
+                            Delete
+                          </button>
+                          </>
                         )}
                       </td>
                     </tr>

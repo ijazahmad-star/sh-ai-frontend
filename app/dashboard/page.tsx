@@ -27,8 +27,9 @@ export default async function DashboardPage() {
   }
   return (
     <div className="min-h-screen py-4 from-white to-zinc-50 dark:from-black dark:to-zinc-900 font-sans">
+      <Navigation />
       <div className="container">
-        <Navigation />
+        
         <main className="mt-8">
           <div className="card bg-white dark:bg-zinc-900 shadow-lg rounded-xl p-6">
             <h1 className="text-2xl font-bold text-black dark:text-white">

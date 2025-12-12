@@ -184,8 +184,8 @@ export default function KnowledgeBasePage() {
 
   return (
     <div className="min-h-screen py-8 bg-white dark:bg-black">
-      <div className="container max-w-5xl mx-auto px-4">
       <Navigation />
+      <div className="container max-w-5xl mx-auto px-4">
         <header className="py-8">
           <h1 className="text-3xl font-extrabold text-black dark:text-white">
             My Knowledge Base

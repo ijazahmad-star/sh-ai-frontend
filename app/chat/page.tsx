@@ -30,8 +30,8 @@ export default async function ChatPage() {
   return (
     <>
       <div className="min-h-screen py-4 from-white to-zinc-50 dark:from-black dark:to-zinc-900 font-sans">
+      <Navigation />
         <div className="container">
-          <Navigation />
           <ChatInterface />
         </div>
       </div>

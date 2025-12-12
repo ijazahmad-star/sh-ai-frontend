@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 import ReactMarkdown from "react-markdown";
@@ -36,8 +37,19 @@ export default function ChatInterface() {
     if (session?.user) {
       loadConversations();
       checkUserKB();
+      checkUserHasAccessToDefaultKB();
     }
   }, [session]);
+
+  useEffect(() => {
+    if (hasPersonalKB && hasAccessToDefaultKB) {
+      setKbType("default");
+    } else if (hasAccessToDefaultKB) {
+      setKbType("default");
+    } else if (hasPersonalKB) {
+      setKbType("custom");
+    }
+  }, [hasPersonalKB, hasAccessToDefaultKB]);
 
   const checkUserHasAccessToDefaultKB = async () => {
     if (!session?.user?.id) return;
@@ -46,13 +58,15 @@ export default function ChatInterface() {
       const res = await fetch(`${API_BASE}/check_user_has_access_to_default_kb/${session.user.id}`);
       if (res.ok) {
         const data = await res.json();
-        setHasAccessToDefaultKB(data.has_access_to_default_kb || false);
+        // console.log(data);
+        setHasAccessToDefaultKB(data.has_access_to_default || false);
       }
     }
     catch (e) {
       console.error("Failed to check user has access to default KB:", e);
     }
   };
+
   // Check if user has personal KB
   const checkUserKB = async () => {
     if (!session?.user?.id) return;
@@ -263,15 +277,18 @@ export default function ChatInterface() {
     await handleSubmit();
   };
 
-  // if (initialLoading) {
-  //   return (
-  //     <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm/90">
-  //       <div className="text-gray-700 dark:text-gray-300 animate-pulse text-lg font-semibold">
-  //         Loading chats...
-  //       </div>
-  //     </div>
-  //   );
-  // }
+
+  if (!hasAccessToDefaultKB && !hasPersonalKB) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm/90">
+        <div className="text-gray-700 dark:text-gray-300 text-lg font-semibold">
+        You do not have access to the default KB. Please Create your {" "}
+        <span className="font-bold text-blue-600 underline hovor:bg-red-600"><Link href="/knowledge-base" className="" >Custom KB</Link></span>
+        </div>
+      </div>
+    );
+  }
+console.log("KB in use: ",kbType)
   return (
     <div className="flex h-screen bg-white dark:bg-zinc-900">
       {/* Sidebar with conversation history */}
@@ -403,19 +420,41 @@ export default function ChatInterface() {
             />
 
             {/* KB Type Dropdown */}
-            {hasPersonalKB && (
+            {/* If user has BOTH → show full dropdown */}
+            {hasPersonalKB && hasAccessToDefaultKB && (
               <select
                 value={kbType}
-                onChange={(e) =>
-                  setKbType(e.target.value as "default" | "custom")
-                }
-                className="px-3 py-2 rounded-md border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                onChange={(e) => setKbType(e.target.value as "default" | "custom")}
+                className="px-3 py-2 rounded-md border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm text-slate-900 dark:text-white"
                 disabled={loading}
               >
                 <option value="default">SH DB</option>
                 <option value="custom">Custom DB</option>
               </select>
             )}
+
+            {/* If user has ONLY default KB */}
+            {!hasPersonalKB && hasAccessToDefaultKB && (
+              <select
+                value="default"
+                className="px-3 py-2 rounded-md border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm"
+                disabled
+              >
+                <option value="default">SH DB</option>
+              </select>
+            )}
+
+            {/* If user has ONLY personal KB */}
+            {hasPersonalKB && !hasAccessToDefaultKB && (
+              <select
+                value="custom"
+                className="px-3 py-2 rounded-md border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm"
+                disabled
+              >
+                <option value="custom">Custom DB</option>
+              </select>
+            )}
+
 
             <button
               type="submit"

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useSession, signOut } from "next-auth/react";
 
 export default function Navigation() {
@@ -25,7 +26,7 @@ export default function Navigation() {
           {session?.user?.role === "admin" && (
             <Link
               href="/admin/users"
-              className="text-yellow-300 hover:underline font-semibold"
+              className="text-white hover:underline"
             >
               Manage Users
             </Link>

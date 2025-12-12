@@ -127,7 +127,7 @@ export default function AdminUsersPage() {
     // delete its corresponding vectors
     try {
       const res = await fetch(
-        `${API_BASE}/delete_user_document/${userId}`,
+        `${API_BASE}/admin/delete_user/${userId}`,
         { method: 'DELETE' }
       );
       const data = await res.json();

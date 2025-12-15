@@ -180,7 +180,8 @@ export default function ChatInterface() {
       const response = await getAiResponse(
         userMessage.content,
         session.user.id,
-        kbType
+        kbType,
+        conversationId,
       );
 
       // AI message with sources

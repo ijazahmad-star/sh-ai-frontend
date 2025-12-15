@@ -120,7 +120,8 @@ export const getActivePrompt = async (userId: string): Promise<Prompt | null> =>
 export const getAiResponse = async (
   query: string,
   userId: string,
-  kbType: "default" | "custom" = "default"
+  kbType: "default" | "custom" = "default",
+  conversationId: string
 ): Promise<{ response: string; sources: any[] } | null> => {
   try {
     const res = await fetch(`${API_BASE}/query`, {
@@ -129,7 +130,8 @@ export const getAiResponse = async (
       body: JSON.stringify({ 
         query, 
         user_id: userId,
-        kb_type: kbType 
+        kb_type: kbType, 
+        conversation_id: conversationId
       }),
     });
 

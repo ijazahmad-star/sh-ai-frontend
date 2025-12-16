@@ -220,6 +220,24 @@ export default function ChatInterface() {
 
   const deleteConversation = async (id: string) => {
     if (!confirm("Delete this conversation?")) return;
+    try {
+      const response = await fetch(`${API_BASE}/conversations/${id}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to delete conversation");
+      }
+
+      const data = await response.json();
+      console.log("Deleted:", data);
+    } catch (error) {
+      console.error("Error:", error);
+    }
+
+
 
     try {
       const res = await fetch(`/api/chat/conversations/${id}`, {
@@ -279,194 +297,193 @@ export default function ChatInterface() {
   };
 
 
-  if (!hasAccessToDefaultKB && !hasPersonalKB) {
+  if (!hasAccessToDefaultKB && !hasPersonalKB && session?.user.role !== "admin") {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm/90">
         <div className="text-gray-700 dark:text-gray-300 text-lg font-semibold">
-        You do not have access to the default KB. Please Create your {" "}
-        <span className="font-bold text-blue-600 underline hovor:bg-red-600"><Link href="/knowledge-base" className="" >Custom KB</Link></span>
+          You do not have access to the default KB. Please Create your {" "}
+          <span className="font-bold text-blue-600 underline hovor:bg-red-600"><Link href="/knowledge-base" className="" >Custom KB</Link></span>
         </div>
       </div>
     );
   }
-console.log("KB in use: ",kbType)
   return (
-    <div className="flex h-screen bg-white dark:bg-zinc-900">
-      {/* Sidebar with conversation history */}
-      <div className="w-64 bg-gray-100 dark:bg-zinc-950 border-r border-gray-200 dark:border-zinc-700 overflow-y-auto">
-        <div className="p-4">
-          <button
-            onClick={createNewConversation}
-            className="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-semibold"
-          >
-            + New Chat
-          </button>
-        </div>
-        <div className="px-2">
-          <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 px-3 mb-2">
-            Chat History
-          </h3>
-          {conversations.map((conv) => (
-            <div
-              key={conv.id}
-              className={`group relative mb-1 ${
-                currentConversationId === conv.id
-                  ? "bg-red-600 text-white"
-                  : "hover:bg-gray-200 dark:hover:bg-zinc-800 text-gray-900 dark:text-gray-300"
-              } rounded-md`}
+    <>
+      <div className="fixed inset-0 pt-18 flex bg-white dark:bg-zinc-900">
+        {/* Sidebar with conversation history */}
+        <div className="w-[20%] bg-gray-200 dark:bg-zinc-950 border-r border-gray-200 dark:border-zinc-700 overflow-y-auto">
+          <div className="p-4">
+            <button
+              onClick={createNewConversation}
+              className="w-full bg-[rgb(11,0,44)] hover:bg-purple-900 text-white px-4 py-2 rounded text-sm font-semibold"
             >
-              <button
-                onClick={() => loadConversation(conv.id)}
-                className="w-full text-left px-3 py-2 text-sm truncate pr-8"
-              >
-                {conv.title}
-              </button>
-              <button
-                onClick={() => deleteConversation(conv.id)}
-                className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700"
-                title="Delete conversation"
-              >
-                Del
-              </button>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Chat area */}
-      <div className="flex-1 flex flex-col border border-gray-50 bg-white dark:bg-zinc-900">
-        <div className="h-full w-full flex flex-col">
-          <header className="px-6 py-4 border-b border-gray-100 dark:border-zinc-700 bg-gradient-to-b from-white to-zinc-50 dark:from-zinc-800 dark:to-zinc-900">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-bold text-black dark:text-white">
-                  Chat With AI
-                </h2>
-                <p className="text-sm text-red-600 dark:text-red-500 font-medium">
-                  SH AI Assistance!
-                </p>
-              </div>
-            </div>
-          </header>
-
-          <div className="flex-1 p-6 overflow-y-auto">
-            {messages.length === 0 && (
-              <div className="text-center text-sm text-gray-500 dark:text-gray-400">
-                No messages yet — ask something using the input below.
-              </div>
-            )}
-
-            {messages.map((m, idx) => (
+              + New Chat
+            </button>
+          </div>
+          <div className="px-2">
+            <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 px-3 mb-2">
+              Chat History
+            </h3>
+            {conversations.map((conv) => (
               <div
-                key={idx}
-                className={`flex ${
-                  m.role === "user" ? "justify-end" : "justify-start"
-                } mb-4`}
+                key={conv.id}
+                className={`group relative mb-1 ${currentConversationId === conv.id
+                  ? "bg-gray-500 text-white"
+                  : "bg-gray-300 hover:bg-gray-400 dark:hover:bg-zinc-800 text-gray-900 dark:text-gray-300"
+                  } rounded-xl`}
               >
-                <div
-                  className={`max-w-[80%] px-4 py-3 rounded-lg shadow-sm text-sm leading-6 ${
-                    m.role === "user"
-                      ? "bg-red-600 text-white rounded-br-none"
-                      : "bg-gray-100 text-gray-900 dark:bg-zinc-700 dark:text-white rounded-bl-none"
-                  }`}
+                <button
+                  onClick={() => loadConversation(conv.id)}
+                  className="w-full text-left px-3 py-2 text-sm truncate pr-8"
                 >
-                  {/* Main Response */}
-                  <div className="mb-2">
-                    <ReactMarkdown>{m.content}</ReactMarkdown>
-                  </div>
-
-                  {/* Sources Section */}
-                  {m.sources && m.sources.length > 0 && (
-                    <div className="mt-4 pt-3 border-t border-gray-300 dark:border-zinc-600">
-                      <p className="text-xs font-semibold mb-2 text-gray-700 dark:text-gray-300">
-                        Sources ({m.sources.length}):
-                      </p>
-                      <div className="space-y-2">
-                        {m.sources.map((source, sourceIdx) => (
-                          <div
-                            key={sourceIdx}
-                            className="bg-white dark:bg-zinc-800 p-2 rounded border border-gray-200 dark:border-zinc-600"
-                          >
-                            <p className="text-xs font-medium text-blue-600 dark:text-blue-400 break-all">
-                              {String(source)}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
+                  {conv.title}
+                </button>
+                <button
+                  onClick={() => deleteConversation(conv.id)}
+                  className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700"
+                  title="Delete conversation"
+                >
+                  🗑️
+                </button>
               </div>
             ))}
-            {loading && (
-              <div className="flex justify-start">
-                <div className="max-w-[60%] px-4 py-2 rounded-lg bg-gray-100 dark:bg-zinc-700 animate-pulse">
-                  AI is typing...
+          </div>
+        </div>
+
+        {/* Chat area */}
+        <div className="flex-1 flex flex-col border border-gray-50 bg-white dark:bg-zinc-900">
+          <div className="h-full w-full flex flex-col">
+            <header className="px-6 py-4 border-b border-gray-100 dark:border-zinc-700 bg-gradient-to-b from-white to-zinc-50 dark:from-zinc-800 dark:to-zinc-900">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-bold text-black dark:text-white">
+                    Chat With AI
+                  </h2>
+                  <p className="text-sm text-red-600 dark:text-red-500 font-medium">
+                    SH AI Assistance!
+                  </p>
                 </div>
               </div>
-            )}
-            <div ref={messagesEndRef} />
-          </div>
+            </header>
 
-          <form
-            onSubmit={handleFormSubmit}
-            className="px-4 py-3 border-t border-gray-100 dark:border-zinc-700 bg-white dark:bg-zinc-800 flex items-center gap-3"
-          >
-            <input
-              id="query"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              className="flex-1 px-3 py-2 rounded-md border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
-              placeholder="Type your question..."
-            />
+            <div className="flex-1 p-6 overflow-y-auto">
+              {messages.length === 0 && (
+                <div className="text-center text-sm text-gray-500 dark:text-gray-400">
+                  No messages yet — ask something using the input below.
+                </div>
+              )}
 
-            {/* KB Type Dropdown */}
-            {/* If user has BOTH → show full dropdown */}
-            {hasPersonalKB && hasAccessToDefaultKB && (
-              <select
-                value={kbType}
-                onChange={(e) => setKbType(e.target.value as "default" | "custom")}
-                className="px-3 py-2 rounded-md border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm text-slate-900 dark:text-white"
-                disabled={loading}
-              >
-                <option value="default">SH DB</option>
-                <option value="custom">Custom DB</option>
-              </select>
-            )}
+              {messages.map((m, idx) => (
+                <div
+                  key={idx}
+                  className={`flex ${m.role === "user" ? "justify-end" : "justify-start"
+                    } mb-4`}
+                >
+                  <div
+                    className={`max-w-[80%] px-4 py-3 rounded-lg shadow-sm text-sm leading-6 ${m.role === "user"
+                      ? "bg-gray-600 text-white rounded-br-none"
+                      : "bg-gray-200 text-gray-900 dark:bg-zinc-700 dark:text-white rounded-bl-none"
+                      }`}
+                  >
+                    {/* Main Response */}
+                    <div className="mb-2">
+                      <ReactMarkdown>{m.content}</ReactMarkdown>
+                    </div>
 
-            {/* If user has ONLY default KB */}
-            {!hasPersonalKB && hasAccessToDefaultKB && (
-              <select
-                value="default"
-                className="px-3 py-2 rounded-md border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm"
-                disabled
-              >
-                <option value="default">SH DB</option>
-              </select>
-            )}
+                    {/* Sources Section */}
+                    {m.sources && m.sources.length > 0 && (
+                      <div className="mt-4 pt-3 border-t border-gray-300 dark:border-zinc-600">
+                        <p className="text-xs font-semibold mb-2 text-gray-700 dark:text-gray-300">
+                          Sources ({m.sources.length}):
+                        </p>
+                        <div className="space-y-2">
+                          {m.sources.map((source, sourceIdx) => (
+                            <div
+                              key={sourceIdx}
+                              className="bg-white dark:bg-zinc-800 p-2 rounded border border-gray-200 dark:border-zinc-600"
+                            >
+                              <p className="text-xs font-medium text-blue-600 dark:text-blue-400 break-all">
+                                {String(source)}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {loading && (
+                <div className="flex justify-start">
+                  <div className="max-w-[60%] px-4 py-2 rounded-lg bg-gray-100 dark:bg-zinc-700 animate-pulse">
+                    AI is typing...
+                  </div>
+                </div>
+              )}
+              <div ref={messagesEndRef} />
+            </div>
 
-            {/* If user has ONLY personal KB */}
-            {hasPersonalKB && !hasAccessToDefaultKB && (
-              <select
-                value="custom"
-                className="px-3 py-2 rounded-md border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm"
-                disabled
-              >
-                <option value="custom">Custom DB</option>
-              </select>
-            )}
-
-
-            <button
-              type="submit"
-              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 text-sm font-semibold rounded-md disabled:opacity-60"
-              disabled={loading || !query.trim()}
+            <form
+              onSubmit={handleFormSubmit}
+              className="px-4 py-3 border-t border-gray-100 dark:border-zinc-700 bg-white dark:bg-zinc-800 flex items-center gap-3"
             >
-              Send
-            </button>
-          </form>
+              <input
+                id="query"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                className="flex-1 px-3 py-2 rounded-md border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                placeholder="Type your question..."
+              />
+
+              {/* KB Type Dropdown */}
+              {/* If user has BOTH → show full dropdown */}
+              {hasPersonalKB && hasAccessToDefaultKB && (
+                <select
+                  value={kbType}
+                  onChange={(e) => setKbType(e.target.value as "default" | "custom")}
+                  className="px-3 py-2 rounded-md border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm text-slate-900 dark:text-white"
+                  disabled={loading}
+                >
+                  <option value="default">SH DB</option>
+                  <option value="custom">Custom DB</option>
+                </select>
+              )}
+
+              {/* If user has ONLY default KB */}
+              {!hasPersonalKB && hasAccessToDefaultKB && (
+                <select
+                  value="default"
+                  className="px-3 py-2 rounded-md border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm"
+                  disabled
+                >
+                  <option value="default">SH DB</option>
+                </select>
+              )}
+
+              {/* If user has ONLY personal KB */}
+              {hasPersonalKB && !hasAccessToDefaultKB && (
+                <select
+                  value="custom"
+                  className="px-3 py-2 rounded-md border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm"
+                  disabled
+                >
+                  <option value="custom">Custom DB</option>
+                </select>
+              )}
+
+
+              <button
+                type="submit"
+                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 text-sm font-semibold rounded-md disabled:opacity-60"
+                disabled={loading || !query.trim()}
+              >
+                Send
+              </button>
+            </form>
+          </div>
         </div>
       </div>
-    </div>
+
+    </>
   );
 }

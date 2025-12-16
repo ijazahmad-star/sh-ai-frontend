@@ -3,52 +3,65 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useSession, signOut } from "next-auth/react";
+import logopic from "../public/SH-logo.png";
+import { usePathname } from "next/navigation";
 
 export default function Navigation() {
   const { data: session } = useSession();
+  const pathname = usePathname();
   const handleSignOut = async () => {
     await signOut({ callbackUrl: "/" });
   };
+
   return (
     <div
-      className="p-6 w-full border-b border-gray-200 dark:border-zinc-800"
+      className="w-full border-b border-gray-200 dark:border-zinc-800"
       style={{ backgroundColor: "rgb(11, 0, 44)" }}
     >
-      <header className="flex justify-between items-center">
-        <div className="text-2xl font-bold text-white">
-          <span className="text-red-600">SH</span> AI Assistant
+      <header className="flex items-center justify-between px-6 py-4">
+        <div className="flex items-center gap-3">
+          <Image
+            src={logopic}
+            alt="Logo"
+            className="rounded-full"
+            width={50}
+            height={50}
+          />
+          <span className="text-2xl font-bold text-white">
+            <span className="text-red-600">SH</span> AI Assistant
+          </span>
         </div>
-        <div className="flex gap-6 items-center">
-          <Link href="/dashboard" className="text-white hover:underline">
+
+        <div className="flex items-center gap-6">
+          <Link href="/dashboard" className={pathname === "/dashboard" ? "text-yellow-500 font-bold" : "text-white"}>
             Dashboard
           </Link>
 
           {session?.user?.role === "admin" && (
-            <Link
-              href="/admin/users"
-              className="text-white hover:underline"
-            >
+            <Link href="/admin/users" className={pathname === "/admin/users" ? "text-yellow-500 font-bold" : "text-white"}>
               Manage Users
             </Link>
           )}
 
           <Link
             href="/prompts/system-prompts"
-            className="text-white hover:underline"
+            className={pathname === "/prompts/system-prompts" ? "text-yellow-500 font-bold" : "text-white"}
           >
             System Prompts
           </Link>
-          <Link href="/knowledge-base" className="text-white hover:underline">
+
+          <Link href="/knowledge-base" className={pathname === "/knowledge-base" ? "text-yellow-500 font-bold" : "text-white"}>
             Knowledge Base
           </Link>
-          <Link href="/chat" className="text-white hover:underline">
-            Chat
+
+          <Link href="/chat" className={pathname === "/chat" ? "text-yellow-500 font-bold" : "text-white hovor"}>
+            AI Chat
           </Link>
 
           {session?.user && (
             <div className="flex items-center gap-4">
-              <div className="flex items-center text-white gap-2 hover:underline">
-                <span className="text-sm text-white">
+              <div className="flex items-center gap-2 text-white">
+                <span className="text-sm">
                   {session.user.name} ({session.user.role})
                 </span>
                 {session.user.image && (
@@ -61,7 +74,7 @@ export default function Navigation() {
               </div>
               <button
                 onClick={handleSignOut}
-                className=" text-sm text-white hover:bg-zinc-800 hover:text-red-600 "
+                className="text-sm text-white hover:text-red-600"
               >
                 Sign Out
               </button>

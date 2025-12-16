@@ -29,8 +29,10 @@ export default async function SystemPromptsPage() {
   return (
     <>
       <div className="min-h-screen py-4  from-white to-zinc-50 dark:from-black dark:to-zinc-900 font-sans">
-      <Navigation />
-        <div className="container">
+        <div className="fixed top-0 left-0 right-0 z-50">
+          <Navigation />
+        </div>
+        <div className="container mt-18">
           <SystemPrompts />
         </div>
       </div>

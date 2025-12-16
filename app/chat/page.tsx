@@ -29,11 +29,11 @@ export default async function ChatPage() {
   }
   return (
     <>
-      <div className="min-h-screen py-4 from-white to-zinc-50 dark:from-black dark:to-zinc-900 font-sans">
-      <Navigation />
-        <div className="container">
-          <ChatInterface />
+      <div className="h-screen overflow-hidden font-sans">
+        <div className="fixed top-0 left-0 right-0 z-50">
+          <Navigation />
         </div>
+        <ChatInterface />
       </div>
     </>
   );

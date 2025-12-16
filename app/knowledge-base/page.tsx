@@ -32,7 +32,7 @@ export default function KnowledgeBasePage() {
         const data = await res.json();
         setDocuments(data.documents || []);
       }
-    } catch (_) {}
+    } catch (_) { }
     finally {
       setLoading(false);
     }
@@ -83,7 +83,7 @@ export default function KnowledgeBasePage() {
       const res = await fetch(`${API_BASE}/download_user_document/${docId}?user_id=${session.user.id}`);
       const data = await res.json();
       if (data.download_url) window.open(data.download_url, "_blank");
-    } catch (_) {}
+    } catch (_) { }
   };
 
   const handleDelete = async (docId: string) => {
@@ -92,7 +92,7 @@ export default function KnowledgeBasePage() {
     try {
       await fetch(`${API_BASE}/delete_user_document/${docId}?user_id=${session.user.id}`, { method: "DELETE" });
       setDocuments(docs => docs.filter(d => d.id !== docId));
-    } catch (_) {}
+    } catch (_) { }
   };
 
   if (!session?.user?.id) {
@@ -107,16 +107,17 @@ export default function KnowledgeBasePage() {
 
   return (
     <div className="min-h-screen py-8 bg-white dark:bg-black">
-      <Navigation />
-      <div className="container max-w-5xl mx-auto px-4">
+      <div className="fixed top-0 left-0 right-0 z-50">
+        <Navigation />
+      </div>
+      <div className="container max-w-5xl mx-auto px-4 mt-18">
         <header className="py-8">
           <h1 className="text-3xl font-extrabold text-black dark:text-white">My Knowledge Base</h1>
         </header>
 
         {uploadMessage && (
-          <div className={`mb-4 p-4 rounded-md ${
-            uploadMessage.type === "success" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
-          }`}>
+          <div className={`mb-4 p-4 rounded-md ${uploadMessage.type === "success" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+            }`}>
             {uploadMessage.text}
           </div>
         )}
@@ -126,9 +127,8 @@ export default function KnowledgeBasePage() {
             <h2 className="text-lg font-semibold text-black dark:text-white">Upload Document</h2>
             <label
               htmlFor="file-upload"
-              className={`px-4 py-2 rounded-md font-semibold text-sm cursor-pointer ${
-                isUploading ? "bg-gray-400 cursor-not-allowed" : "bg-red-600 hover:bg-red-700 text-white"
-              }`}
+              className={`px-4 py-2 rounded-md font-semibold text-sm cursor-pointer ${isUploading ? "bg-gray-400 cursor-not-allowed" : "bg-red-600 hover:bg-red-700 text-white"
+                }`}
             >
               {isUploading ? "Uploading..." : "Upload PDF"}
             </label>

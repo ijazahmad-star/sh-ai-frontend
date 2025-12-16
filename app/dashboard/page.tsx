@@ -27,9 +27,11 @@ export default async function DashboardPage() {
   }
   return (
     <div className="min-h-screen py-4 from-white to-zinc-50 dark:from-black dark:to-zinc-900 font-sans">
-      <Navigation />
-      <div className="container">
-        
+      <div className="fixed top-0 left-0 right-0 z-50">
+        <Navigation />
+      </div>
+      <div className="container mt-18">
+
         <main className="mt-8">
           <div className="card bg-white dark:bg-zinc-900 shadow-lg rounded-xl p-6">
             <h1 className="text-2xl font-bold text-black dark:text-white">
@@ -43,7 +45,7 @@ export default async function DashboardPage() {
               <Link href="/prompts/system-prompts" className="btn-primary">
                 Manage Prompts
               </Link>
-              <Link href="/chat" className="btn-ghost">
+              <Link href="/chat" className="btn-primary">
                 Open Chat
               </Link>
             </div>

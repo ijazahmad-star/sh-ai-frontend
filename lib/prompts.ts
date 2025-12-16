@@ -1,6 +1,6 @@
 import type { Prompt } from "@/types/prompt";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE
 
 export const fetchAllSystemPrompts = async (userId: string): Promise<{
   prompts: Prompt[];

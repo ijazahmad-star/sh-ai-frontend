@@ -40,7 +40,7 @@ export async function GET(
 
 async function checkUserPersonalKB(userId: string): Promise<boolean> {
   // This calls your backend API to check if user has personal KB
-  const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
+  const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
   try {
     const res = await fetch(`${API_BASE}/check_user_kb/${userId}`);
     if (res.ok) {

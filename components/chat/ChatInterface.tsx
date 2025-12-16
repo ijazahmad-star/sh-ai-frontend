@@ -6,7 +6,7 @@ import ReactMarkdown from "react-markdown";
 import { getAiResponse } from "@/lib/prompts";
 import type { Message, Source, Conversation } from "@/types/chat";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
 
 export default function ChatInterface() {
   const { data: session } = useSession();

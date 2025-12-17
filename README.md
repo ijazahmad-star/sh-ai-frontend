@@ -175,3 +175,7 @@ sh-smart-ai-assistant-frontend/
 ├── package-lock.json
 └── README.md
 ```
+## Running the Application
+```bash
+npm run dev
+```

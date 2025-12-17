@@ -124,22 +124,6 @@ export default function AdminUsersPage() {
   const handleDeleteUser = async (userId: string) => {
     if (!confirm("Are you sure you want to delete this user?")) return;
 
-    // delete its corresponding vectors
-    try {
-      const res = await fetch(
-        `${API_BASE}/admin/delete_user/${userId}`,
-        { method: 'DELETE' }
-      );
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error || "Failed to delete user documents");
-        return;
-      }
-    } catch (error) {
-      setError("Error in deleting embedding");
-    }
-
-    // delete user...
     try {
       const res = await fetch(`/api/admin/users/${userId}/delete-user`, {
         method: "DELETE",
@@ -154,11 +138,10 @@ export default function AdminUsersPage() {
       setSuccess("User deleted successfully");
       await loadUsers();
       setTimeout(() => setSuccess(""), 3000);
-    } catch (e) {
+    } catch (error) {
       setError("Something went wrong");
     }
-  };
-  
+  };  
 
   return (
     <div className="min-h-screen py-4 bg-white dark:bg-black">

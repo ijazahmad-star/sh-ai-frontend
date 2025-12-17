@@ -221,40 +221,29 @@ export default function ChatInterface() {
   const deleteConversation = async (id: string) => {
     if (!confirm("Delete this conversation?")) return;
     try {
-      const response = await fetch(`${API_BASE}/conversations/${id}`,
-        {
+      const [apiRes, appRes] = await Promise.all([
+        fetch(`${API_BASE}/conversations/${id}`, {
           method: "DELETE",
-        }
-      );
-
-      if (!response.ok) {
+        }),
+        fetch(`/api/chat/conversations/${id}`, {
+          method: "DELETE",
+        }),
+      ]);
+  
+      if (!apiRes.ok || !appRes.ok) {
         throw new Error("Failed to delete conversation");
       }
-
-      const data = await response.json();
-      console.log("Deleted:", data);
-    } catch (error) {
-      console.error("Error:", error);
-    }
-
-
-
-    try {
-      const res = await fetch(`/api/chat/conversations/${id}`, {
-        method: "DELETE",
-      });
-
-      if (res.ok) {
-        if (currentConversationId === id) {
-          setCurrentConversationId(null);
-          setMessages([]);
-        }
-        await loadConversations();
+  
+      if (currentConversationId === id) {
+        setCurrentConversationId(null);
+        setMessages([]);
       }
-    } catch (e) {
-      console.error("Failed to delete conversation:", e);
+  
+      await loadConversations();
+    } catch (error) {
+      console.error("Failed to delete conversation:", error);
     }
-  };
+  };  
 
   const updateConversationTitle = async (
     conversationId: string,

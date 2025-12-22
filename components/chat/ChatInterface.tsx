@@ -142,27 +142,27 @@ export default function ChatInterface() {
     return null;
   };
 
-  const saveMessage = async (
-    conversation_id: string,
-    role: string,
-    content: string,
-    sources: Source[] = []
-  ) => {
-    try {
-      await fetch("/api/chat/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          conversation_id,
-          role,
-          content,
-          sources,
-        }),
-      });
-    } catch (e) {
-      console.error("Failed to save message:", e);
-    }
-  };
+  // const saveMessage = async (
+  //   conversation_id: string,
+  //   role: string,
+  //   content: string,
+  //   sources: Source[] = []
+  // ) => {
+  //   try {
+  //     await fetch("/api/chat/messages", {
+  //       method: "POST",
+  //       headers: { "Content-Type": "application/json" },
+  //       body: JSON.stringify({
+  //         conversation_id,
+  //         role,
+  //         content,
+  //         sources,
+  //       }),
+  //     });
+  //   } catch (e) {
+  //     console.error("Failed to save message:", e);
+  //   }
+  // };
 
   const handleSubmit = async () => {
     if (query.trim() === "" || !session?.user?.id) return;
@@ -186,7 +186,7 @@ export default function ChatInterface() {
     setQuery("");
     setLoading(true);
 
-    saveMessage(conversationId, "user", userMessage.content);
+    // saveMessage(conversationId, "user", userMessage.content);
 
     try {
       // Get AI response
@@ -210,13 +210,14 @@ export default function ChatInterface() {
       // const sources: string[] =
       //   response?.sources?.map((s: Source) => s.source) || [];
       // Save AI message along with sources
-      saveMessage(
-        conversationId,
-        "assistant",
-        aiMessage.content,
-        aiMessage.sources
-      );
-      // saveMessage(conversationId, "assistant", aiMessage.content, aiMessage.sources?.map((s) => s.source) || []);
+
+      // saveMessage(
+      //   conversationId,
+      //   "assistant",
+      //   aiMessage.content,
+      //   aiMessage.sources
+      // );
+
 
       // Update conversation title if first message
       if (isFirstMessage) {
@@ -239,16 +240,11 @@ export default function ChatInterface() {
   const deleteConversation = async (id: string) => {
     if (!confirm("Delete this conversation?")) return;
     try {
-      const [apiRes, appRes] = await Promise.all([
-        fetch(`${API_BASE}/conversations/${id}`, {
-          method: "DELETE",
-        }),
-        fetch(`/api/chat/conversations/${id}`, {
-          method: "DELETE",
-        }),
-      ]);
+      const apiRes = await fetch(`/api/chat/conversations/${id}`, {
+        method: "DELETE",
+      })
 
-      if (!apiRes.ok || !appRes.ok) {
+      if (!apiRes.ok) {
         throw new Error("Failed to delete conversation");
       }
 

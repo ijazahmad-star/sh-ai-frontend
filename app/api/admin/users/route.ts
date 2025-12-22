@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
         name: true,
         role: true,
         createdAt: true,
-        kbAccess: {
+        kb_access: {
           select: {
             hasAccessToDefaultKB: true,
           },
@@ -80,14 +80,14 @@ export async function POST(req: NextRequest) {
         password: hashedPassword,
         name,
         role: "user",
-        kbAccess: {
+        kb_access: {
           create: {
             hasAccessToDefaultKB: false,
           },
         },
       },
       include: {
-        kbAccess: true,
+        kb_access: true,
       },
     });
 

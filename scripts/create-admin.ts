@@ -7,7 +7,7 @@ import bcrypt from "bcryptjs";
 async function createAdminUser() {
   try {
     // Create connection directly
-    const connectionString = process.env.DATABASE_URL;
+    const connectionString = "place your string";
     if (!connectionString) {
       throw new Error("DATABASE_URL is not set");
     }
@@ -21,22 +21,23 @@ async function createAdminUser() {
     console.log("Creating admin user...");
     const hashedPassword = await bcrypt.hash("admin@123456", 10);
 
-    const adminUser = await prisma.user.create({
+    const admin = await prisma.user.create({
       data: {
         email: "admin@example.com",
         password: hashedPassword,
         name: "Admin User",
         role: "admin",
-        kbAccess: {
+        kb_access: {       
           create: {
-            hasAccessToDefaultKB: true,
-          },
+            hasAccessToDefaultKB: true
+          }
         },
       },
       include: {
-        kbAccess: true,
-      },
-    });
+        kb_access: true  
+      }
+    })
+    
 
     console.log("✅ Admin user created successfully!");
     console.log("Email: admin@example.com");

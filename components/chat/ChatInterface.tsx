@@ -10,6 +10,7 @@ const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
 
 export default function ChatInterface() {
   const { data: session } = useSession();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [currentConversationId, setCurrentConversationId] = useState<
     string | null
@@ -42,6 +43,12 @@ export default function ChatInterface() {
   }, [session]);
 
   useEffect(() => {
+    if (session?.user && (hasAccessToDefaultKB || hasPersonalKB)) {
+      createNewConversation();
+    }
+  }, [hasAccessToDefaultKB,hasPersonalKB,session]);
+
+  useEffect(() => {
     if (hasPersonalKB && hasAccessToDefaultKB) {
       setKbType("default");
     } else if (hasAccessToDefaultKB) {
@@ -55,14 +62,15 @@ export default function ChatInterface() {
     if (!session?.user?.id) return;
 
     try {
-      const res = await fetch(`${API_BASE}/check_user_has_access_to_default_kb/${session.user.id}`);
+      const res = await fetch(
+        `${API_BASE}/check_user_has_access_to_default_kb/${session.user.id}`
+      );
       if (res.ok) {
         const data = await res.json();
         // console.log(data);
         setHasAccessToDefaultKB(data.has_access_to_default || false);
       }
-    }
-    catch (e) {
+    } catch (e) {
       console.error("Failed to check user has access to default KB:", e);
     }
   };
@@ -134,13 +142,18 @@ export default function ChatInterface() {
     return null;
   };
 
-  const saveMessage = async (conversationId: string, role: string, content: string, sources: Source[] = []) => {
+  const saveMessage = async (
+    conversation_id: string,
+    role: string,
+    content: string,
+    sources: Source[] = []
+  ) => {
     try {
       await fetch("/api/chat/messages", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          conversationId,
+          conversation_id,
           role,
           content,
           sources,
@@ -181,7 +194,7 @@ export default function ChatInterface() {
         userMessage.content,
         session.user.id,
         kbType,
-        conversationId,
+        conversationId
       );
 
       // AI message with sources
@@ -197,7 +210,12 @@ export default function ChatInterface() {
       // const sources: string[] =
       //   response?.sources?.map((s: Source) => s.source) || [];
       // Save AI message along with sources
-      saveMessage(conversationId, "assistant", aiMessage.content, aiMessage.sources);
+      saveMessage(
+        conversationId,
+        "assistant",
+        aiMessage.content,
+        aiMessage.sources
+      );
       // saveMessage(conversationId, "assistant", aiMessage.content, aiMessage.sources?.map((s) => s.source) || []);
 
       // Update conversation title if first message
@@ -229,21 +247,21 @@ export default function ChatInterface() {
           method: "DELETE",
         }),
       ]);
-  
+
       if (!apiRes.ok || !appRes.ok) {
         throw new Error("Failed to delete conversation");
       }
-  
+
       if (currentConversationId === id) {
         setCurrentConversationId(null);
         setMessages([]);
       }
-  
+
       await loadConversations();
     } catch (error) {
       console.error("Failed to delete conversation:", error);
     }
-  };  
+  };
 
   const updateConversationTitle = async (
     conversationId: string,
@@ -285,13 +303,20 @@ export default function ChatInterface() {
     await handleSubmit();
   };
 
-
-  if (!hasAccessToDefaultKB && !hasPersonalKB && session?.user.role !== "admin") {
+  if (
+    !hasAccessToDefaultKB &&
+    !hasPersonalKB &&
+    session?.user.role !== "admin"
+  ) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm/90">
         <div className="text-gray-700 dark:text-gray-300 text-lg font-semibold">
-          You do not have access to the default KB. Please Create your {" "}
-          <span className="font-bold text-blue-600 underline hovor:bg-red-600"><Link href="/knowledge-base" className="" >Custom KB</Link></span>
+          You do not have access to the default KB. Please Create your{" "}
+          <span className="font-bold text-blue-600 underline hovor:bg-red-600">
+            <Link href="/knowledge-base" className="">
+              Custom KB
+            </Link>
+          </span>
         </div>
       </div>
     );
@@ -300,7 +325,7 @@ export default function ChatInterface() {
     <>
       <div className="fixed inset-0 pt-18 flex bg-white dark:bg-zinc-900">
         {/* Sidebar with conversation history */}
-        <div className="w-[20%] bg-gray-200 dark:bg-zinc-950 border-r border-gray-200 dark:border-zinc-700 overflow-y-auto">
+        <div className="hidden sm:block w-[20%] bg-gray-200 dark:bg-zinc-950 border-r border-gray-200 dark:border-zinc-700 overflow-y-auto">
           <div className="p-4">
             <button
               onClick={createNewConversation}
@@ -316,10 +341,11 @@ export default function ChatInterface() {
             {conversations.map((conv) => (
               <div
                 key={conv.id}
-                className={`group relative mb-1 ${currentConversationId === conv.id
-                  ? "bg-gray-500 text-white"
-                  : "bg-gray-300 hover:bg-gray-400 dark:hover:bg-zinc-800 text-gray-900 dark:text-gray-300"
-                  } rounded-xl`}
+                className={`group relative mb-1 ${
+                  currentConversationId === conv.id
+                    ? "bg-gray-500 text-white"
+                    : "bg-gray-300 hover:bg-gray-400 dark:hover:bg-zinc-800 text-gray-900 dark:text-gray-300"
+                } rounded-xl`}
               >
                 <button
                   onClick={() => loadConversation(conv.id)}
@@ -332,7 +358,19 @@ export default function ChatInterface() {
                   className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700"
                   title="Delete conversation"
                 >
-                  🗑️
+                  <svg
+                    className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                    />
+                  </svg>
                 </button>
               </div>
             ))}
@@ -342,16 +380,22 @@ export default function ChatInterface() {
         {/* Chat area */}
         <div className="flex-1 flex flex-col border border-gray-50 bg-white dark:bg-zinc-900">
           <div className="h-full w-full flex flex-col">
-            <header className="px-6 py-4 border-b border-gray-100 dark:border-zinc-700 bg-gradient-to-b from-white to-zinc-50 dark:from-zinc-800 dark:to-zinc-900">
+            <header className="px-6 py-4 border-b border-gray-100 dark:border-zinc-700 bg-linear-to-b from-white to-zinc-50 dark:from-zinc-800 dark:to-zinc-900">
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-lg font-bold text-black dark:text-white">
                     Chat With AI
                   </h2>
-                  <p className="text-sm text-red-600 dark:text-red-500 font-medium">
+                  <p className="text-sm text-primary-500 dark:text-red-500 font-medium">
                     SH AI Assistance!
                   </p>
                 </div>
+                <button
+                  onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                  className="sm:hidden top-4 left-4 z-30 p-2 rounded-lg bg-gray-600 text-white"
+                >
+                  Show History
+                </button>
               </div>
             </header>
 
@@ -365,14 +409,16 @@ export default function ChatInterface() {
               {messages.map((m, idx) => (
                 <div
                   key={idx}
-                  className={`flex ${m.role === "user" ? "justify-end" : "justify-start"
-                    } mb-4`}
+                  className={`flex ${
+                    m.role === "user" ? "justify-end" : "justify-start"
+                  } mb-4`}
                 >
                   <div
-                    className={`max-w-[80%] px-4 py-3 rounded-lg shadow-sm text-sm leading-6 ${m.role === "user"
-                      ? "bg-gray-600 text-white rounded-br-none"
-                      : "bg-gray-200 text-gray-900 dark:bg-zinc-700 dark:text-white rounded-bl-none"
-                      }`}
+                    className={`max-w-[80%] px-4 py-3 rounded-lg shadow-sm text-sm leading-6 ${
+                      m.role === "user"
+                        ? "bg-gray-600 text-white rounded-br-none"
+                        : "bg-gray-200 text-gray-900 dark:bg-zinc-700 dark:text-white rounded-bl-none"
+                    }`}
                   >
                     {/* Main Response */}
                     <div className="mb-2">
@@ -429,7 +475,9 @@ export default function ChatInterface() {
               {hasPersonalKB && hasAccessToDefaultKB && (
                 <select
                   value={kbType}
-                  onChange={(e) => setKbType(e.target.value as "default" | "custom")}
+                  onChange={(e) =>
+                    setKbType(e.target.value as "default" | "custom")
+                  }
                   className="px-3 py-2 rounded-md border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm text-slate-900 dark:text-white"
                   disabled={loading}
                 >
@@ -460,19 +508,93 @@ export default function ChatInterface() {
                 </select>
               )}
 
-
               <button
                 type="submit"
-                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 text-sm font-semibold rounded-md disabled:opacity-60"
+                className="btn-primary"
                 disabled={loading || !query.trim()}
               >
-                Send
+                <svg
+                  className="w-4 h-4 transform rotate-50"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+                  />
+                </svg>
               </button>
             </form>
           </div>
         </div>
-      </div>
 
+        {/* mobile view  */}
+
+        <div
+          className={`md:hidden ${
+            isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+          } md:translate-x-0 fixed md:relative w-64 md:w-[20%] h-full transform transition-transform duration-200 ease-in-out bg-gray-200 dark:bg-zinc-950 border-r border-gray-200 dark:border-zinc-700 overflow-y-auto z-20`}
+        >
+          <div className="p-4 mt-10 md:mt-0">
+            <button
+              onClick={() => {
+                createNewConversation();
+                setIsSidebarOpen(false);
+              }}
+              className="w-full bg-[rgb(11,0,44)] hover:bg-purple-900 text-white px-4 py-3 rounded-lg text-sm font-semibold"
+            >
+              + New Chat
+            </button>
+          </div>
+          <div className="px-2 pb-4">
+            <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 px-3 mb-2">
+              Chat History
+            </h3>
+            {conversations.map((conv) => (
+              <div
+                key={conv.id}
+                className={`group relative mb-1 ${
+                  currentConversationId === conv.id
+                    ? "bg-gray-500 text-white"
+                    : "bg-gray-300 hover:bg-gray-400 dark:hover:bg-zinc-800 text-gray-900 dark:text-gray-300"
+                } rounded-xl`}
+              >
+                <button
+                  onClick={() => {
+                    loadConversation(conv.id);
+                    setIsSidebarOpen(false);
+                  }}
+                  className="w-full text-left px-3 py-3 text-sm truncate pr-10"
+                >
+                  {conv.title}
+                </button>
+                <button
+                  onClick={() => deleteConversation(conv.id)}
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 p-1"
+                  title="Delete conversation"
+                >
+                  <svg
+                    className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                    />
+                  </svg>
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
     </>
   );
 }

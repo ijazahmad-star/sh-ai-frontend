@@ -31,7 +31,6 @@ export default async function DashboardPage() {
         <Navigation />
       </div>
       <div className="container mt-18">
-
         <main className="mt-8">
           <div className="card bg-white dark:bg-zinc-900 shadow-lg rounded-xl p-6">
             <h1 className="text-2xl font-bold text-black dark:text-white">
@@ -47,6 +46,9 @@ export default async function DashboardPage() {
               </Link>
               <Link href="/chat" className="btn-primary">
                 Open Chat
+              </Link>
+              <Link href="/knowledge-base" className="btn-primary">
+                Access Personal Datebase
               </Link>
             </div>
           </div>

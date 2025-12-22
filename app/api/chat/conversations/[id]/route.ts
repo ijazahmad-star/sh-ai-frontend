@@ -28,7 +28,7 @@ export async function GET(
     const conversation = await prisma.conversation.findFirst({
       where: {
         id,
-        userId: user.id, // Ensure user can only access their own conversations
+        user_id: user.id, // Ensure user can only access their own conversations
       },
       include: {
         messages: {
@@ -74,7 +74,7 @@ export async function DELETE(
     const conversation = await prisma.conversation.findFirst({
       where: {
         id,
-        userId: user.id,
+        user_id: user.id,
       },
     });
 
@@ -120,7 +120,7 @@ export async function PATCH(
     const conversation = await prisma.conversation.findFirst({
       where: {
         id,
-        userId: user.id,
+        user_id: user.id,
       },
     });
 

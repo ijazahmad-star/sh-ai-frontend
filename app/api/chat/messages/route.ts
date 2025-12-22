@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+
 // POST create new message
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -20,13 +21,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    const { conversationId, role, content, sources } = await req.json();
+    // Extract data from request
+    const { conversation_id, role, content, sources } = await req.json();
 
-    // Verify user owns this conversation
+    // 1. Verify variable exists to avoid ReferenceError
+    if (!conversation_id) {
+      return NextResponse.json({ error: "conversation_id is required" }, { status: 400 });
+    }
+
+    // 2. Verify user owns this conversation
     const conversation = await prisma.conversation.findFirst({
       where: {
-        id: conversationId,
-        userId: user.id,
+        id: conversation_id,
+        user_id: user.id,
       },
     });
 
@@ -34,26 +41,36 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
     }
 
+    // 3. Create the message
     const message = await prisma.message.create({
       data: {
-        conversationId,
-        userId: user.id,
+        conversation_id, // Variable name matches destructuring above
+        user_id: user.id,
         role,
         content,
-        sources: sources || [],
+        sources: sources || [], // Default to empty array for Json field
       },
     });
 
-    // Update conversation's updatedAt
+    // 4. Update conversation's updatedAt
     await prisma.conversation.update({
-      where: { id: conversationId },
-      data: { updatedAt: new Date() },
+      where: { 
+        id: conversation_id // FIXED: was conversationId, now matches conversation_id
+      },
+      data: { 
+        updatedAt: new Date() 
+      },
     });
 
     return NextResponse.json(message);
+
   } catch (error) {
-    console.error("Database error:", error);
-    return NextResponse.json({ error: "Database error" }, { status: 500 });
+    // Log the error for debugging
+    console.error("Database error details:", error);
+    return NextResponse.json(
+      { error: "Internal Server Error", details: error instanceof Error ? error.message : "Unknown error" }, 
+      { status: 500 }
+    );
   }
 }
 

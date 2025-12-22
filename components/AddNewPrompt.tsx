@@ -35,12 +35,16 @@ export default function AddNewPrompt({
     }
 
     try {
-      const body = await addSystemPrompt(name.trim(), promptText.trim(), userId);
+      const body = await addSystemPrompt(
+        name.trim(),
+        promptText.trim(),
+        userId
+      );
       if (!body) {
         alert("Failed to add prompt");
         return;
       }
-      
+
       const created: Prompt = {
         id: body.id,
         name: body.name,

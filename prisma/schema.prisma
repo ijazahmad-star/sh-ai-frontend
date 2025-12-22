@@ -7,72 +7,107 @@ datasource db {
 }
 
 model User {
-  id            String        @id @default(uuid()) @db.Uuid  
-  email         String        @unique
-  password      String?
-  name          String?
-  image         String?
-  role          String        @default("user")
-  emailVerified DateTime?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid @map("id")
+  email          String    @unique @map("email")
+  name           String?   @map("name")
+  image          String?   @map("image")
+  emailVerified  DateTime? @map("email_verified")
+  createdAt      DateTime? @default(now()) @map("created_at")
+  updatedAt      DateTime? @updatedAt @map("updated_at")
+  password       String?   @map("password")
+  role           String    @default("user") @map("role")
+
+  files         UserFile[]
+  prompts       Prompt[]
   conversations Conversation[]
+  kb_access     KBAccess?
   messages      Message[]
-  kbAccess      KBAccess?
-  prompts       Prompts[]
+  documents     Document[]
 
   @@map("users")
 }
 
-model KBAccess {
-  id                   String   @id @default(cuid())
-  userId               String   @unique
-  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  hasAccessToDefaultKB Boolean  @default(false)
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+model UserFile {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid @map("id")
+  user_id      String    @db.Uuid @map("user_id")
+  filename     String    @map("filename")
+  storage_path String    @map("storage_path")
+  created_at   DateTime? @default(now()) @map("created_at")
 
-  @@map("kb_access")
+  user      User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  messages  Message[] @relation("UserFileMessages")
+  documents Document[]
+
+  @@map("user_files")
+}
+
+model Prompt {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid @map("id")
+  user_id   String?   @db.Uuid @map("user_id")
+  prompt    String    @map("prompt")
+  createdAt DateTime? @default(now()) @map("created_at")
+  updatedAt DateTime? @updatedAt @map("updated_at")
+  is_active Boolean?  @default(false) @map("is_active")
+  name      String?   @map("name")
+
+  user User? @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("prompts")
 }
 
 model Conversation {
-  id        String    @id @default(cuid())
-  title     String?   @default("New Chat")
-  userId    String
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  messages  Message[]
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid @map("id")
+  title     String?   @default("New Chat") @map("title")
+  user_id   String    @db.Uuid @map("user_id")
+  createdAt DateTime? @default(now()) @map("created_at")
+  updatedAt DateTime? @updatedAt @map("updated_at")
 
-  @@index([userId])
+  user      User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  messages Message[]
+
   @@map("conversations")
 }
 
 model Message {
-  id             String       @id @default(cuid())
-  conversationId String
-  userId         String
-  role           String
-  content        String
-  sources        Json?
-  createdAt      DateTime     @default(now())
-  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid @map("id")
+  conversation_id String    @db.Uuid @map("conversation_id")
+  user_id         String    @db.Uuid @map("user_id")
+  user_file_id    String?   @db.Uuid @map("user_file_id")
+  role            String    @map("role")
+  content         String    @map("content")
+  createdAt       DateTime? @default(now()) @map("created_at")
+  sources         Json?     @map("sources")
 
-  @@index([conversationId])
-  @@index([userId])
+  conversation Conversation @relation(fields: [conversation_id], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  userFile     UserFile?    @relation("UserFileMessages", fields: [user_file_id], references: [id], onDelete: Cascade)
+
   @@map("messages")
 }
 
-model Prompts {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId    String?  
-  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  prompt    String   @db.Text
-  createdAt DateTime @default(dbgenerated("now()")) @db.Timestamptz
-  updatedAt DateTime @default(dbgenerated("now()")) @db.Timestamptz
-  isActive  Boolean?
-  name      String?  @db.Text
+model KBAccess {
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid @map("id")
+  user_id              String    @unique @db.Uuid @map("user_id")
+  hasAccessToDefaultKB Boolean   @default(false) @map("has_access_to_default_kb")
+  createdAt            DateTime? @default(now()) @map("created_at")
+  updatedAt            DateTime? @updatedAt @map("updated_at")
 
-  @@map("prompts")
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("kb_accesses")
+}
+
+model Document {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid @map("id")
+  user_id           String?   @db.Uuid @map("user_id")
+  content           String    @map("content")
+  document_metadata Json?     @map("document_metadata")
+  embedding         Json      @map("embedding")
+  created_at        DateTime? @default(now()) @map("created_at")
+  file_id           String?   @db.Uuid @map("file_id")
+
+  user User?     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  file UserFile? @relation(fields: [file_id], references: [id], onDelete: Cascade)
+
+  @@map("documents")
 }

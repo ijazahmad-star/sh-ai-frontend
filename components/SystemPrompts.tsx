@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
 
 import {
@@ -16,62 +16,81 @@ export default function SystemPrompts() {
   const { data: session } = useSession();
   const [systemPrompts, setSystemPrompts] = useState<Prompt[]>([]);
   const [showComponent, setShowComponent] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(false);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      if (!session?.user?.id) return;
+  const fetchData = useCallback(async () => {
+    if (!session?.user?.id) return;
 
+    setLoading(true);
+    try {
       const result = await fetchAllSystemPrompts(session.user.id);
       if (result) {
         setSystemPrompts(result.prompts || []);
       }
-    };
-    fetchData();
+    } catch (error) {
+      console.error("Failed to fetch prompts:", error);
+    } finally {
+      setLoading(false);
+    }
   }, [session?.user?.id]);
 
-  const handleDelete = async (name: string) => {
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const handleDelete = useCallback(async (name: string) => {
     if (!session?.user?.id) {
       console.error("User not authenticated");
       return;
     }
 
-    const status = await deleteSystemPrompt(name, session.user.id);
-    if (!status) {
-      console.error("Failed to delete prompt:", name);
-      return;
+    setLoading(true);
+    try {
+      const status = await deleteSystemPrompt(name, session.user.id);
+      if (!status) {
+        console.error("Failed to delete prompt:", name);
+        return;
+      }
+      console.log("Delete prompt with name:", name);
+      setSystemPrompts((prev) => prev.filter((p) => p.name !== name));
+    } finally {
+      setLoading(false);
     }
-    console.log("Delete prompt with name:", name);
-    setSystemPrompts((prev) => prev.filter((p) => p.name !== name));
-  };
+  }, [session?.user?.id]);
 
-  const handleSetActive = async (name: string) => {
+  const handleSetActive = useCallback(async (name: string) => {
     if (!session?.user?.id) {
       console.error("User not authenticated");
       return;
     }
 
-    const status = await setActiveSystemPrompt(name, session.user.id);
-    if (!status) {
-      console.error("Failed to set active prompt:", name);
-      return;
+    setLoading(true);
+    try {
+      const status = await setActiveSystemPrompt(name, session.user.id);
+      if (!status) {
+        console.error("Failed to set active prompt:", name);
+        return;
+      }
+      console.log("Set active prompt with name:", name);
+      setSystemPrompts((prev) =>
+        prev.map((p) =>
+          p.name === name ? { ...p, is_active: true } : { ...p, is_active: false }
+        )
+      );
+    } finally {
+      setLoading(false);
     }
-    console.log("Set active prompt with name:", name);
-    setSystemPrompts((prev) =>
-      prev.map((p) =>
-        p.name === name ? { ...p, is_active: true } : { ...p, is_active: false }
-      )
-    );
-  };
+  }, [session?.user?.id]);
 
-  const handleOnEditUpdate = (updated: Prompt) => {
+  const handleOnEditUpdate = useCallback((updated: Prompt) => {
     setSystemPrompts((prev) =>
       prev.map((p) => (p.id === updated.id ? updated : p))
     );
-  };
+  }, []);
 
-  const handleOnAddNewPrompt = (newPrompt: Prompt) => {
+  const handleOnAddNewPrompt = useCallback((newPrompt: Prompt) => {
     setSystemPrompts((prev) => [...prev, newPrompt]);
-  };
+  }, []);
 
   // Show loading state if not authenticated
   if (!session?.user?.id) {
@@ -177,11 +196,10 @@ export default function SystemPrompts() {
                           </td>
                           <td className="py-4 px-4 text-sm">
                             <span
-                              className={`inline-flex items-center px-3 py-1 text-xs font-medium rounded-full ${
-                                sp.is_active
-                                  ? "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-200"
-                                  : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"
-                              }`}
+                              className={`inline-flex items-center px-3 py-1 text-xs font-medium rounded-full ${sp.is_active
+                                ? "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-200"
+                                : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"
+                                }`}
                             >
                               {sp.is_active ? "Active" : "Inactive"}
                             </span>
@@ -194,11 +212,10 @@ export default function SystemPrompts() {
                                 onUpdate={handleOnEditUpdate}
                               />
                               <button
-                                className={`px-3 py-1.5 rounded text-xs font-semibold transition-colors ${
-                                  sp.is_active
-                                    ? "bg-gray-300 text-gray-500 cursor-not-allowed dark:bg-gray-700 dark:text-gray-500"
-                                    : "bg-red-600 text-white hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800"
-                                }`}
+                                className={`px-3 py-1.5 rounded text-xs font-semibold transition-colors ${sp.is_active
+                                  ? "bg-gray-300 text-gray-500 cursor-not-allowed dark:bg-gray-700 dark:text-gray-500"
+                                  : "bg-red-600 text-white hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800"
+                                  }`}
                                 disabled={sp.is_active}
                                 onClick={() => handleSetActive(sp.name)}
                               >
@@ -232,11 +249,10 @@ export default function SystemPrompts() {
                               {sp.name}
                             </h3>
                             <span
-                              className={`inline-flex items-center px-2 py-0.5 mt-1 text-xs font-medium rounded-full ${
-                                sp.is_active
-                                  ? "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-200"
-                                  : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"
-                              }`}
+                              className={`inline-flex items-center px-2 py-0.5 mt-1 text-xs font-medium rounded-full ${sp.is_active
+                                ? "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-200"
+                                : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"
+                                }`}
                             >
                               {sp.is_active ? "Active" : "Inactive"}
                             </span>
@@ -260,11 +276,10 @@ export default function SystemPrompts() {
                               onUpdate={handleOnEditUpdate}
                             />
                             <button
-                              className={`flex-1 px-3 py-2 rounded text-xs font-semibold transition-colors ${
-                                sp.is_active
-                                  ? "bg-gray-300 text-gray-500 cursor-not-allowed dark:bg-gray-700 dark:text-gray-500"
-                                  : "bg-red-600 text-white hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800"
-                              }`}
+                              className={`flex-1 px-3 py-2 rounded text-xs font-semibold transition-colors ${sp.is_active
+                                ? "bg-gray-300 text-gray-500 cursor-not-allowed dark:bg-gray-700 dark:text-gray-500"
+                                : "bg-red-600 text-white hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800"
+                                }`}
                               disabled={sp.is_active}
                               onClick={() => handleSetActive(sp.name)}
                             >

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-const PYTHON_BACKEND_URL = process.env.NEXT_PUBLIC_API_BASE;
+const PYTHON_BACKEND_URL = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
 // GET specific conversation with messages
 export async function GET(
   req: NextRequest,
@@ -25,32 +25,24 @@ export async function GET(
 
     const { id } = await params;
 
-    const conversation = await prisma.conversation.findFirst({
-      where: {
-        id,
-        user_id: user.id,
-      },
-    });
+    const [conversation, pythonRes] = await Promise.all([
+      prisma.conversation.findFirst({
+        where: { id, user_id: user.id },
+      }),
+      fetch(`${PYTHON_BACKEND_URL}/conversations/${id}`, {
+        next: { revalidate: 0 } // Ensure fresh data
+      })
+    ]);
 
     if (!conversation) {
       return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
     }
-    // 2. Fetch messages from Python FastAPI backend
-    const PYTHON_BACKEND_URL = process.env.NEXT_PUBLIC_API_BASE;
     
-    const response = await fetch(`${PYTHON_BACKEND_URL}/conversations/${id}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      cache: 'no-store' // Ensure we get fresh messages
-    });
-
-    if (!response.ok) {
-      throw new Error(`Backend responded with status: ${response.status}`);
+    if (!pythonRes.ok) {
+      throw new Error(`Backend responded with status: ${pythonRes.status}`);
     }
 
-    const pythonData = await response.json();
+    const pythonData = await pythonRes.json();
 
     // 3. Return the original conversation metadata combined with Python messages
     return NextResponse.json({
@@ -87,28 +79,21 @@ export async function DELETE(
     const { id } = await params;
 
     // Verify ownership before deleting
-    const conversation = await prisma.conversation.findFirst({
-      where: {
-        id,
-        user_id: user.id,
-      },
-    });
-
-    if (!conversation) {
-      return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
-    }
-
-    try {
-      const response = await fetch(`${PYTHON_BACKEND_URL}/conversations/${id}`, {
+    const [conversation, pythonRes] = await Promise.all([
+      prisma.conversation.findFirst({
+        where: {
+          id,
+          user_id: user.id,
+        },
+      }),
+      fetch(`${PYTHON_BACKEND_URL}/conversations/${id}`, {
         method: 'DELETE',
-      });
-  
-      if (!response.ok) {
-        throw new Error(`Backend responded with status: ${response.status}`);
-      }
-      console.log(`Conversations with thread id ${id} are deleted`)
-    } catch (error) {
-      console.error("Failed to connect to Python backend for deletion:", error);
+      })
+    ]);
+
+
+    if (!conversation || !pythonRes) {
+      return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
     }
 
     await prisma.conversation.delete({

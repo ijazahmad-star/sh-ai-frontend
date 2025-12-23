@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { signIn, useSession } from "next-auth/react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Image from "next/image";
 
 import profilepic from "../public/SH-logo.png"
@@ -18,19 +18,10 @@ export default function Home() {
   useEffect(() => {
     if (session) {
       router.push("/dashboard");
-      // router.replace("/dashboard")
     }
-    // const handleBeforeUnload = () => {
-    //   if (session) {
-    //     window.history.replaceState(null, '', '/dashboard');
-    //   }
-    // };
+  }, [session, router]);
 
-    // window.addEventListener('beforeunload', handleBeforeUnload);
-    // return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [session]);
-
-  const handleEmailAuth = async (e: React.FormEvent) => {
+  const handleEmailAuth = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setIsLoading(true);
@@ -53,7 +44,7 @@ export default function Home() {
       setError("Something went wrong");
       setIsLoading(false);
     }
-  };
+  }, [email, password, router]);
 
   return (
     <div className="min-h-screen py-4 bg-gradient-to-b from-white to-zinc-50 dark:from-black dark:to-zinc-900 font-sans">
@@ -68,7 +59,7 @@ export default function Home() {
         </header>
 
         <main className="mt-8 flex flex-col lg:flex-row items-center justify-center gap-8 lg:gap-12 px-4">
-  
+
           <div className="flex flex-col items-center justify-center lg:w-1/2 max-w-md">
             <Image
               src={profilepic}

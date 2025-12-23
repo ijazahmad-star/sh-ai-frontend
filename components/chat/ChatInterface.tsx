@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useSession } from "next-auth/react";
 import ReactMarkdown from "react-markdown";
 import { getAiResponse } from "@/lib/prompts";
@@ -18,47 +18,18 @@ export default function ChatInterface() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingCov, setLoadingCov] = useState(false);
   const [kbType, setKbType] = useState<"default" | "custom">("default");
   const [hasPersonalKB, setHasPersonalKB] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [hasAccessToDefaultKB, setHasAccessToDefaultKB] = useState(false);
-  // const [initialLoading, setInitialLoading] = useState(true);
 
   // Auto-scroll to bottom when messages change
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  // Load conversations on mount
-  useEffect(() => {
-    if (session?.user) {
-      loadConversations();
-      checkUserKB();
-      checkUserHasAccessToDefaultKB();
-    }
-  }, [session]);
-
-  useEffect(() => {
-    if (session?.user && (hasAccessToDefaultKB || hasPersonalKB)) {
-      createNewConversation();
-    }
-  }, [hasAccessToDefaultKB,hasPersonalKB,session]);
-
-  useEffect(() => {
-    if (hasPersonalKB && hasAccessToDefaultKB) {
-      setKbType("default");
-    } else if (hasAccessToDefaultKB) {
-      setKbType("default");
-    } else if (hasPersonalKB) {
-      setKbType("custom");
-    }
-  }, [hasPersonalKB, hasAccessToDefaultKB]);
-
-  const checkUserHasAccessToDefaultKB = async () => {
+  const checkUserHasAccessToDefaultKB = useCallback(async () => {
     if (!session?.user?.id) return;
 
     try {
@@ -67,18 +38,16 @@ export default function ChatInterface() {
       );
       if (res.ok) {
         const data = await res.json();
-        // console.log(data);
         setHasAccessToDefaultKB(data.has_access_to_default || false);
       }
     } catch (e) {
       console.error("Failed to check user has access to default KB:", e);
     }
-  };
+  }, [session?.user?.id]);
 
   // Check if user has personal KB
-  const checkUserKB = async () => {
+  const checkUserKB = useCallback(async () => {
     if (!session?.user?.id) return;
-
     try {
       const res = await fetch(`${API_BASE}/check_user_kb/${session.user.id}`);
       if (res.ok) {
@@ -92,10 +61,9 @@ export default function ChatInterface() {
     } catch (e) {
       console.error("Failed to check user KB:", e);
     }
-  };
+  }, [session?.user?.id]);
 
-  const loadConversations = async () => {
-    // setInitialLoading(true);
+  const loadConversations = useCallback(async () => {
     try {
       const res = await fetch("/api/chat/conversations");
       if (res.ok) {
@@ -105,10 +73,10 @@ export default function ChatInterface() {
     } catch (e) {
       console.error("Failed to load conversations:", e);
     }
-    // setInitialLoading(false);
-  };
+  }, []);
 
-  const loadConversation = async (conversationId: string) => {
+  const loadConversation = useCallback(async (conversationId: string) => {
+    setLoadingCov(true);
     try {
       const res = await fetch(`/api/chat/conversations/${conversationId}`);
       if (res.ok) {
@@ -118,10 +86,12 @@ export default function ChatInterface() {
       }
     } catch (e) {
       console.error("Failed to load conversation:", e);
+    } finally {
+      setLoadingCov(false);
     }
-  };
+  }, []);
 
-  const createNewConversation = async () => {
+  const createNewConversation = useCallback(async () => {
     try {
       const res = await fetch("/api/chat/conversations", {
         method: "POST",
@@ -140,7 +110,7 @@ export default function ChatInterface() {
       console.error("Failed to create conversation:", e);
     }
     return null;
-  };
+  }, [loadConversations]);
 
   // const saveMessage = async (
   //   conversation_id: string,
@@ -164,7 +134,7 @@ export default function ChatInterface() {
   //   }
   // };
 
-  const handleSubmit = async () => {
+  const handleSubmit = useCallback(async () => {
     if (query.trim() === "" || !session?.user?.id) return;
 
     let conversationId = currentConversationId;
@@ -186,8 +156,6 @@ export default function ChatInterface() {
     setQuery("");
     setLoading(true);
 
-    // saveMessage(conversationId, "user", userMessage.content);
-
     try {
       // Get AI response
       const response = await getAiResponse(
@@ -206,18 +174,6 @@ export default function ChatInterface() {
       };
 
       setMessages((m) => [...m, aiMessage]);
-      setLoading(false);
-      // const sources: string[] =
-      //   response?.sources?.map((s: Source) => s.source) || [];
-      // Save AI message along with sources
-
-      // saveMessage(
-      //   conversationId,
-      //   "assistant",
-      //   aiMessage.content,
-      //   aiMessage.sources
-      // );
-
 
       // Update conversation title if first message
       if (isFirstMessage) {
@@ -233,12 +189,14 @@ export default function ChatInterface() {
         content: "Error: could not get response",
       };
       setMessages((m) => [...m, errMessage]);
+    } finally {
       setLoading(false);
     }
-  };
+  }, [query, session?.user?.id, currentConversationId, messages.length, createNewConversation, kbType, loadConversations]);
 
-  const deleteConversation = async (id: string) => {
+  const deleteConversation = useCallback(async (id: string) => {
     if (!confirm("Delete this conversation?")) return;
+
     try {
       const apiRes = await fetch(`/api/chat/conversations/${id}`, {
         method: "DELETE",
@@ -257,9 +215,9 @@ export default function ChatInterface() {
     } catch (error) {
       console.error("Failed to delete conversation:", error);
     }
-  };
+  }, [currentConversationId, loadConversations]);
 
-  const updateConversationTitle = async (
+  const updateConversationTitle = useCallback(async (
     conversationId: string,
     firstMessage: string
   ) => {
@@ -292,7 +250,31 @@ export default function ChatInterface() {
     } catch (e) {
       console.error("Failed to update conversation title:", e);
     }
-  };
+  }, [loadConversations]);
+
+  // useEffect hooks
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  // Load conversations on mount
+  useEffect(() => {
+    if (session?.user) {
+      loadConversations();
+      checkUserKB();
+      checkUserHasAccessToDefaultKB();
+    }
+  }, [session?.user, loadConversations, checkUserKB, checkUserHasAccessToDefaultKB]);
+
+  useEffect(() => {
+    if (hasPersonalKB && hasAccessToDefaultKB) {
+      setKbType("default");
+    } else if (hasAccessToDefaultKB) {
+      setKbType("default");
+    } else if (hasPersonalKB) {
+      setKbType("custom");
+    }
+  }, [hasPersonalKB, hasAccessToDefaultKB]);
 
   const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -308,7 +290,7 @@ export default function ChatInterface() {
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm/90">
         <div className="text-gray-700 dark:text-gray-300 text-lg font-semibold">
           You do not have access to the default KB. Please Create your{" "}
-          <span className="font-bold text-blue-600 underline hovor:bg-red-600">
+          <span className="font-bold text-blue-600 underline hover:bg-red-600">
             <Link href="/knowledge-base" className="">
               Custom KB
             </Link>
@@ -337,11 +319,10 @@ export default function ChatInterface() {
             {conversations.map((conv) => (
               <div
                 key={conv.id}
-                className={`group relative mb-1 ${
-                  currentConversationId === conv.id
-                    ? "bg-gray-500 text-white"
-                    : "bg-gray-300 hover:bg-gray-400 dark:hover:bg-zinc-800 text-gray-900 dark:text-gray-300"
-                } rounded-xl`}
+                className={`group relative mb-1 ${currentConversationId === conv.id
+                  ? "bg-gray-500 text-white"
+                  : "bg-gray-300 hover:bg-gray-400 dark:hover:bg-zinc-800 text-gray-900 dark:text-gray-300"
+                  } rounded-xl`}
               >
                 <button
                   onClick={() => loadConversation(conv.id)}
@@ -394,8 +375,17 @@ export default function ChatInterface() {
                 </button>
               </div>
             </header>
+            {loadingCov && <div className="flex-1 flex items-center justify-center">
+              <div className="flex flex-col items-center justify-center space-y-4">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-700 dark:border-gray-300"></div>
+                <div className="text-gray-700 dark:text-gray-300 text-lg font-semibold">
+                  Loading conversations...
+                </div>
+              </div>
+            </div>
+            }
 
-            <div className="flex-1 p-6 overflow-y-auto">
+            {!loadingCov && <div className="flex-1 p-6 overflow-y-auto">
               {messages.length === 0 && (
                 <div className="text-center text-sm text-gray-500 dark:text-gray-400">
                   No messages yet — ask something using the input below.
@@ -405,16 +395,14 @@ export default function ChatInterface() {
               {messages.map((m, idx) => (
                 <div
                   key={idx}
-                  className={`flex ${
-                    m.role === "user" ? "justify-end" : "justify-start"
-                  } mb-4`}
+                  className={`flex ${m.role === "user" ? "justify-end" : "justify-start"
+                    } mb-4`}
                 >
                   <div
-                    className={`max-w-[80%] px-4 py-3 rounded-lg shadow-sm text-sm leading-6 ${
-                      m.role === "user"
-                        ? "bg-gray-600 text-white rounded-br-none"
-                        : "bg-gray-200 text-gray-900 dark:bg-zinc-700 dark:text-white rounded-bl-none"
-                    }`}
+                    className={`max-w-[80%] px-4 py-3 rounded-lg shadow-sm text-sm leading-6 ${m.role === "user"
+                      ? "bg-gray-600 text-white rounded-br-none"
+                      : "bg-gray-200 text-gray-900 dark:bg-zinc-700 dark:text-white rounded-bl-none"
+                      }`}
                   >
                     {/* Main Response */}
                     <div className="mb-2">
@@ -434,7 +422,7 @@ export default function ChatInterface() {
                               className="bg-white dark:bg-zinc-800 p-2 rounded border border-gray-200 dark:border-zinc-600"
                             >
                               <p className="text-xs font-medium text-blue-600 dark:text-blue-400 break-all">
-                                {String(source)}
+                                {String(source.source)}
                               </p>
                             </div>
                           ))}
@@ -452,7 +440,7 @@ export default function ChatInterface() {
                 </div>
               )}
               <div ref={messagesEndRef} />
-            </div>
+            </div>}
 
             <form
               onSubmit={handleFormSubmit}
@@ -530,9 +518,8 @@ export default function ChatInterface() {
         {/* mobile view  */}
 
         <div
-          className={`md:hidden ${
-            isSidebarOpen ? "translate-x-0" : "-translate-x-full"
-          } md:translate-x-0 fixed md:relative w-64 md:w-[20%] h-full transform transition-transform duration-200 ease-in-out bg-gray-200 dark:bg-zinc-950 border-r border-gray-200 dark:border-zinc-700 overflow-y-auto z-20`}
+          className={`md:hidden ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+            } md:translate-x-0 fixed md:relative w-64 md:w-[20%] h-full transform transition-transform duration-200 ease-in-out bg-gray-200 dark:bg-zinc-950 border-r border-gray-200 dark:border-zinc-700 overflow-y-auto z-20`}
         >
           <div className="p-4 mt-10 md:mt-0">
             <button
@@ -552,11 +539,10 @@ export default function ChatInterface() {
             {conversations.map((conv) => (
               <div
                 key={conv.id}
-                className={`group relative mb-1 ${
-                  currentConversationId === conv.id
-                    ? "bg-gray-500 text-white"
-                    : "bg-gray-300 hover:bg-gray-400 dark:hover:bg-zinc-800 text-gray-900 dark:text-gray-300"
-                } rounded-xl`}
+                className={`group relative mb-1 ${currentConversationId === conv.id
+                  ? "bg-gray-500 text-white"
+                  : "bg-gray-300 hover:bg-gray-400 dark:hover:bg-zinc-800 text-gray-900 dark:text-gray-300"
+                  } rounded-xl`}
               >
                 <button
                   onClick={() => {

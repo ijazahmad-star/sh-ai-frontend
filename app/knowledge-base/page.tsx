@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import Navigation from "@/components/Navigation";
 
@@ -22,11 +22,7 @@ export default function KnowledgeBasePage() {
   } | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (session?.user?.id) loadDocuments();
-  }, [session?.user?.id]);
-
-  const loadDocuments = async () => {
+  const loadDocuments = useCallback(async () => {
     if (!session?.user?.id) return;
     try {
       setLoading(true);
@@ -41,9 +37,13 @@ export default function KnowledgeBasePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [session?.user?.id]);
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  useEffect(() => {
+    if (session?.user?.id) loadDocuments();
+  }, [session?.user?.id, loadDocuments]);
+
+  const handleFileUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !session?.user?.id) return;
 
@@ -89,9 +89,9 @@ export default function KnowledgeBasePage() {
       setIsUploading(false);
       setTimeout(() => setUploadMessage(null), 5000);
     }
-  };
+  }, [session?.user?.id, loadDocuments]);
 
-  const handleDownload = async (docId: string) => {
+  const handleDownload = useCallback(async (docId: string) => {
     if (!session?.user?.id) return;
     try {
       const res = await fetch(
@@ -99,10 +99,10 @@ export default function KnowledgeBasePage() {
       );
       const data = await res.json();
       if (data.download_url) window.open(data.download_url, "_blank");
-    } catch (_) {}
-  };
+    } catch (_) { }
+  }, [session?.user?.id]);
 
-  const handleDelete = async (docId: string) => {
+  const handleDelete = useCallback(async (docId: string) => {
     if (!confirm("Are you sure you want to delete this file?")) return;
     if (!session?.user?.id) return;
     try {
@@ -111,8 +111,8 @@ export default function KnowledgeBasePage() {
         { method: "DELETE" }
       );
       setDocuments((docs) => docs.filter((d) => d.id !== docId));
-    } catch (_) {}
-  };
+    } catch (_) { }
+  }, [session?.user?.id]);
 
   if (!session?.user?.id) {
     return (
@@ -148,11 +148,10 @@ export default function KnowledgeBasePage() {
         {/* Upload Status Messages */}
         {uploadMessage && (
           <div
-            className={`mb-4 sm:mb-6 p-3 sm:p-4 rounded-lg ${
-              uploadMessage.type === "success"
-                ? "bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-200"
-                : "bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-200"
-            }`}
+            className={`mb-4 sm:mb-6 p-3 sm:p-4 rounded-lg ${uploadMessage.type === "success"
+              ? "bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-200"
+              : "bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-200"
+              }`}
           >
             <div className="flex items-start">
               {uploadMessage.type === "success" ? (
@@ -207,11 +206,10 @@ export default function KnowledgeBasePage() {
               />
               <label
                 htmlFor="file-upload"
-                className={`inline-flex items-center justify-center w-full sm:w-auto px-4 py-2.5 rounded-lg font-semibold text-sm transition-colors ${
-                  isUploading
-                    ? "bg-gray-400 cursor-not-allowed text-gray-700"
-                    : "bg-red-600 hover:bg-red-700 text-white cursor-pointer"
-                }`}
+                className={`inline-flex items-center justify-center w-full sm:w-auto px-4 py-2.5 rounded-lg font-semibold text-sm transition-colors ${isUploading
+                  ? "bg-gray-400 cursor-not-allowed text-gray-700"
+                  : "bg-red-600 hover:bg-red-700 text-white cursor-pointer"
+                  }`}
               >
                 {isUploading ? (
                   <>

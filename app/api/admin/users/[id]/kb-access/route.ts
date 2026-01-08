@@ -19,8 +19,8 @@ export async function PATCH(
     const { hasAccessToDefaultKB } = await req.json();
 
     // Use 'kbAccess' (camelCase singular) not 'kb_access'
-    const kbAccess = await prisma.KBAccess.update({
-      where: { user_id: id },  // Also use 'userId' not 'user_id'
+    const kbAccess = await prisma.kBAccess.update({
+      where: { user_id: id },
       data: { hasAccessToDefaultKB },
     });
 
@@ -30,4 +30,3 @@ export async function PATCH(
     return NextResponse.json({ error: "Database error" }, { status: 500 });
   }
 }
-

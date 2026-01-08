@@ -22,7 +22,7 @@ export async function GET(
     }
 
     const kbAccess = await prisma.kBAccess.findUnique({
-      where: { userId },
+      where: { user_id: userId },
     });
 
     // Check if user has personal KB

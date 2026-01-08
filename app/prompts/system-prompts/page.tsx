@@ -1,5 +1,5 @@
 import Link from "next/link";
-import SystemPrompts from "@/components/SystemPrompts";
+import SystemPrompts from "@/components/prompts/SystemPrompts";
 import Navigation from "@/components/Navigation";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";

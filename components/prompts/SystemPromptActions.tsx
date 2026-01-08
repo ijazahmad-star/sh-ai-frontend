@@ -15,14 +15,18 @@ export default function SystemPromptEditActions({
 }) {
   const [showModal, setShowModal] = useState(false);
   const [editedPrompt, setEditedPrompt] = useState(systemPrompt.prompt);
-  
+
   const handleEdit = () => {
     setShowModal(true);
   };
 
   const handleSaveEditChange = async () => {
     try {
-      const ok = await updateSystemPrompt(systemPrompt.name, editedPrompt, userId);
+      const ok = await updateSystemPrompt(
+        systemPrompt.name,
+        editedPrompt,
+        userId
+      );
       if (!ok) {
         console.error("Failed to update prompt:", systemPrompt.name);
         return;

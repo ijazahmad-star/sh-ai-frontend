@@ -7,8 +7,8 @@ export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
   if (!session) {
     return (
-      <div className="min-h-screen flex items-center justify-center from-white to-zinc-50 dark:from-black dark:to-zinc-900 font-sans">
-        <div className="text-center">
+      <div className="min-h-screen flex items-center justify-center bg-linear-to-b from-white to-zinc-50 dark:from-black dark:to-zinc-900 font-sans">
+        <div className="text-center p-8 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-sm rounded-2xl border border-gray-100 dark:border-zinc-800 shadow-xl">
           <h1 className="text-3xl font-bold text-black dark:text-white">
             Access Denied
           </h1>
@@ -26,13 +26,13 @@ export default async function DashboardPage() {
     );
   }
   return (
-    <div className="min-h-screen py-4 from-white to-zinc-50 dark:from-black dark:to-zinc-900 font-sans">
+    <div className="min-h-screen py-4 bg-linear-to-b from-white to-zinc-50 dark:from-black dark:to-zinc-900 font-sans">
       <div className="fixed top-0 left-0 right-0 z-50">
         <Navigation />
       </div>
-      <div className="container mt-18">
+      <div className="container mt-28">
         <main className="mt-8">
-          <div className="card bg-white dark:bg-zinc-900 shadow-lg rounded-xl p-6">
+          <div className="card bg-white dark:bg-zinc-900 shadow-lg rounded-xl p-6 border border-gray-100 dark:border-zinc-800">
             <h1 className="text-2xl font-bold text-black dark:text-white">
               Welcome to the Dashboard
             </h1>

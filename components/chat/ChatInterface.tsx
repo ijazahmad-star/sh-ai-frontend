@@ -2,9 +2,11 @@
 import Link from "next/link";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useSession } from "next-auth/react";
+import { Bot, User } from "lucide-react";
 import { getAiResponse } from "@/lib/prompts";
 import type { Message, Conversation } from "@/types/chat";
 import Sidebar from "@/components/chat/Sidebar";
+import ConfirmModal from "../ui/ConfirmModal";
 import MessageBubble from "@/components/chat/MessageBubble";
 import ChatInput from "@/components/chat/ChatInput";
 
@@ -12,7 +14,7 @@ const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
 
 export default function ChatInterface() {
   const { data: session } = useSession();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [query, setQuery] = useState("");
   const [currentConversationId, setCurrentConversationId] = useState<
     string | null
@@ -20,11 +22,15 @@ export default function ChatInterface() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(false);
+  const isGeneratingRef = useRef(false);
   const [loadingCov, setLoadingCov] = useState(false);
   const [kbType, setKbType] = useState<"default" | "custom">("default");
   const [hasPersonalKB, setHasPersonalKB] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [hasAccessToDefaultKB, setHasAccessToDefaultKB] = useState(false);
+  const [pendingDeleteConversationId, setPendingDeleteConversationId] =
+    useState<string | null>(null);
+  const [isDeletingConversation, setIsDeletingConversation] = useState(false);
 
   // Auto-scroll to bottom when messages change
   const scrollToBottom = () => {
@@ -114,30 +120,9 @@ export default function ChatInterface() {
     return null;
   }, [loadConversations]);
 
-  // const saveMessage = async (
-  //   conversation_id: string,
-  //   role: string,
-  //   content: string,
-  //   sources: Source[] = []
-  // ) => {
-  //   try {
-  //     await fetch("/api/chat/messages", {
-  //       method: "POST",
-  //       headers: { "Content-Type": "application/json" },
-  //       body: JSON.stringify({
-  //         conversation_id,
-  //         role,
-  //         content,
-  //         sources,
-  //       }),
-  //     });
-  //   } catch (e) {
-  //     console.error("Failed to save message:", e);
-  //   }
-  // };
-
   const handleSubmit = useCallback(async () => {
     if (query.trim() === "" || !session?.user?.id) return;
+    if (isGeneratingRef.current) return; // prevent overlapping submissions
 
     let conversationId = currentConversationId;
     const isFirstMessage = messages.length === 0;
@@ -156,6 +141,7 @@ export default function ChatInterface() {
     setMessages((m) => [...m, userMessage]);
     const userQuery = query.trim();
     setQuery("");
+    isGeneratingRef.current = true;
     setLoading(true);
 
     try {
@@ -175,7 +161,10 @@ export default function ChatInterface() {
         sources: response?.sources?.map((s) => s.source) || [],
       };
 
+      // append AI message and clear loading state immediately
       setMessages((m) => [...m, aiMessage]);
+      isGeneratingRef.current = false;
+      setLoading(false);
 
       // Update conversation title if first message
       if (isFirstMessage) {
@@ -191,7 +180,11 @@ export default function ChatInterface() {
         content: "Error: could not get response",
       };
       setMessages((m) => [...m, errMessage]);
+      isGeneratingRef.current = false;
+      setLoading(false);
     } finally {
+      // ensure loading is cleared (if not already)
+      isGeneratingRef.current = false;
       setLoading(false);
     }
   }, [
@@ -204,30 +197,55 @@ export default function ChatInterface() {
     loadConversations,
   ]);
 
-  const deleteConversation = useCallback(
-    async (id: string) => {
-      if (!confirm("Delete this conversation?")) return;
+  const deleteConversation = useCallback(async (id: string) => {
+    // open confirmation modal instead of native confirm
+    setPendingDeleteConversationId(id);
+  }, []);
 
+  const confirmDeleteConversation = useCallback(async () => {
+    const id = pendingDeleteConversationId;
+    if (!id) return;
+    setIsDeletingConversation(true);
+    try {
+      const apiRes = await fetch(`/api/chat/conversations/${id}`, {
+        method: "DELETE",
+      });
+
+      if (!apiRes.ok) {
+        throw new Error("Failed to delete conversation");
+      }
+
+      if (currentConversationId === id) {
+        setCurrentConversationId(null);
+        setMessages([]);
+      }
+
+      await loadConversations();
+    } catch (error) {
+      console.error("Failed to delete conversation:", error);
+    } finally {
+      setIsDeletingConversation(false);
+      setPendingDeleteConversationId(null);
+    }
+  }, [pendingDeleteConversationId, currentConversationId, loadConversations]);
+
+  const renameConversation = useCallback(
+    async (id: string, newTitle: string) => {
       try {
-        const apiRes = await fetch(`/api/chat/conversations/${id}`, {
-          method: "DELETE",
+        const res = await fetch(`/api/chat/conversations/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title: newTitle }),
         });
 
-        if (!apiRes.ok) {
-          throw new Error("Failed to delete conversation");
+        if (res.ok) {
+          await loadConversations();
         }
-
-        if (currentConversationId === id) {
-          setCurrentConversationId(null);
-          setMessages([]);
-        }
-
-        await loadConversations();
-      } catch (error) {
-        console.error("Failed to delete conversation:", error);
+      } catch (e) {
+        console.error("Failed to rename conversation:", e);
       }
     },
-    [currentConversationId, loadConversations]
+    [loadConversations]
   );
 
   const updateConversationTitle = useCallback(
@@ -270,6 +288,27 @@ export default function ChatInterface() {
     scrollToBottom();
   }, [messages]);
 
+  // Persistence: Load last conversation on mount
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const savedId = localStorage.getItem("lastConversationId");
+      if (savedId && session?.user && !currentConversationId) {
+        loadConversation(savedId);
+      }
+    }
+  }, [session?.user, loadConversation, currentConversationId]);
+
+  // Persistence: Save current conversation ID when it changes
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      if (currentConversationId) {
+        localStorage.setItem("lastConversationId", currentConversationId);
+      } else {
+        localStorage.removeItem("lastConversationId");
+      }
+    }
+  }, [currentConversationId]);
+
   // Load conversations on mount
   useEffect(() => {
     if (session?.user) {
@@ -299,42 +338,54 @@ export default function ChatInterface() {
     await handleSubmit();
   };
 
-  if (
-    !hasAccessToDefaultKB &&
-    !hasPersonalKB &&
-    session?.user.role !== "admin"
-  ) {
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm/90">
-        <div className="text-gray-700 dark:text-gray-300 text-lg font-semibold">
-          You do not have access to the default KB. Please Create your{" "}
-          <span className="font-bold text-blue-600 underline hover:bg-red-600">
-            <Link href="/knowledge-base" className="">
-              Custom KB
-            </Link>
-          </span>
-        </div>
-      </div>
-    );
-  }
+  const noKbAccess =
+    !hasAccessToDefaultKB && !hasPersonalKB && session?.user?.role !== "admin";
   return (
     <>
-      <div className="fixed inset-0 pt-18 flex bg-white dark:bg-zinc-900">
+      <div className="fixed inset-0 pt-20 flex bg-white dark:bg-zinc-900">
         {/* Sidebar with conversation history */}
-        <div className="hidden sm:block w-[20%] bg-gray-200 dark:bg-zinc-950 border-r border-gray-200 dark:border-zinc-700 overflow-y-auto">
-          <Sidebar
-            conversations={conversations}
-            currentConversationId={currentConversationId}
-            createNewConversation={createNewConversation}
-            loadConversation={loadConversation}
-            deleteConversation={deleteConversation}
-          />
+        <div
+          className={`hidden sm:block transition-all duration-300 ease-in-out bg-[#f9f9f9] dark:bg-[#171717] border-r border-zinc-200 dark:border-zinc-800 overflow-hidden ${
+            isSidebarOpen ? "w-[260px]" : "w-0 border-none"
+          }`}
+        >
+          <div className="w-[260px] h-full">
+            <Sidebar
+              conversations={conversations}
+              currentConversationId={currentConversationId}
+              createNewConversation={createNewConversation}
+              loadConversation={loadConversation}
+              deleteConversation={deleteConversation}
+              renameConversation={renameConversation}
+              toggleSidebar={() => setIsSidebarOpen(false)}
+            />
+          </div>
         </div>
 
         {/* Chat area */}
-        <div className="flex-1 flex flex-col border border-gray-50 bg-white dark:bg-zinc-900">
+        <div className="flex-1 flex flex-col min-w-0 border border-gray-50 bg-white dark:bg-zinc-900 relative">
+          {!isSidebarOpen && (
+            <button
+              onClick={() => setIsSidebarOpen(true)}
+              className="flex absolute top-4 left-4 z-40 p-2.5 sm:p-3 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:cursor-w-resize rounded-lg transition-colors text-zinc-500 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900"
+              title="Open sidebar"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                className="w-5 h-5"
+              >
+                <path d="M21 3C21.5523 3 22 3.44772 22 4V20C22 20.5523 21.5523 21 21 21H3C2.44772 21 2 20.5523 2 20V4C2 3.44772 2.44772 3 3 3H21ZM20 19V5H4V19H20ZM9 7V17H7V7H9Z" />
+              </svg>
+            </button>
+          )}
           <div className="h-full w-full flex flex-col">
-            <header className="px-6 py-4 border-b border-gray-100 dark:border-zinc-700 bg-linear-to-b from-white to-zinc-50 dark:from-zinc-800 dark:to-zinc-900">
+            <header
+              className={`px-6 py-4 border-b border-gray-100 dark:border-zinc-700 bg-linear-to-b from-white to-zinc-50 dark:from-zinc-800 dark:to-zinc-900 transition-all ${
+                !isSidebarOpen ? "pl-16 sm:pl-20" : ""
+              }`}
+            >
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-lg font-bold text-black dark:text-white">
@@ -344,12 +395,6 @@ export default function ChatInterface() {
                     SH AI Assistance!
                   </p>
                 </div>
-                <button
-                  onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                  className="sm:hidden top-4 left-4 z-30 p-2 rounded-lg bg-gray-600 text-white"
-                >
-                  Show History
-                </button>
               </div>
             </header>
             {loadingCov && (
@@ -366,8 +411,25 @@ export default function ChatInterface() {
             {!loadingCov && (
               <div className="flex-1 p-6 overflow-y-auto">
                 {messages.length === 0 && (
-                  <div className="text-center text-sm text-gray-500 dark:text-gray-400">
-                    No messages yet — ask something using the input below.
+                  <div>
+                    <div className="text-center text-xl sm:text-2xl font-bold text-gray-700 dark:text-gray-200 mb-8 mt-10">
+                      Hey {session?.user?.name}! Ready to dive in?
+                    </div>
+
+                    {noKbAccess && (
+                      <div className="max-w-[60%] mx-auto px-4 py-3 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 text-yellow-800 dark:text-yellow-200 text-center">
+                        <p className="text-sm mx-auto">
+                          Please create your personal database or contact your
+                          admin to access the SH database.{" "}
+                          <Link
+                            href="/knowledge-base"
+                            className="font-medium underline text-blue-600"
+                          >
+                            Personal Database
+                          </Link>
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -376,9 +438,19 @@ export default function ChatInterface() {
                     key={idx}
                     className={`flex ${
                       m.role === "user" ? "justify-end" : "justify-start"
-                    } mb-4`}
+                    } mb-4 gap-3`}
                   >
+                    {m.role !== "user" && (
+                      <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center shrink-0 mt-1">
+                        <Bot className="w-4 h-4 text-white" />
+                      </div>
+                    )}
                     <MessageBubble m={m} />
+                    {m.role === "user" && (
+                      <div className="w-8 h-8 bg-gray-200 dark:bg-zinc-700 rounded-full flex items-center justify-center shrink-0 mt-1">
+                        <User className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+                      </div>
+                    )}
                   </div>
                 ))}
                 {loading && (
@@ -401,16 +473,24 @@ export default function ChatInterface() {
               hasPersonalKB={hasPersonalKB}
               hasAccessToDefaultKB={hasAccessToDefaultKB}
               loading={loading}
+              disabled={noKbAccess}
             />
           </div>
         </div>
 
         {/* mobile view  */}
 
+        {isSidebarOpen && (
+          <div
+            className="sm:hidden fixed inset-0 bg-black/50 z-40 transition-opacity"
+            onClick={() => setIsSidebarOpen(false)}
+          />
+        )}
+
         <div
-          className={`md:hidden ${
+          className={`sm:hidden ${
             isSidebarOpen ? "translate-x-0" : "-translate-x-full"
-          } md:translate-x-0 fixed md:relative w-11/12 sm:w-3/4 md:w-[20%] h-full transform transition-transform duration-200 ease-in-out bg-gray-200 dark:bg-zinc-950 border-r border-gray-200 dark:border-zinc-700 overflow-y-auto z-20`}
+          } fixed inset-0 w-[260px] h-full transform transition-transform duration-200 ease-in-out bg-[#f9f9f9] dark:bg-[#171717] border-r border-zinc-200 dark:border-zinc-800 z-50`}
         >
           <Sidebar
             conversations={conversations}
@@ -421,10 +501,23 @@ export default function ChatInterface() {
               setIsSidebarOpen(false);
             }}
             deleteConversation={deleteConversation}
+            renameConversation={renameConversation}
             isMobile
             onClose={() => setIsSidebarOpen(false)}
+            toggleSidebar={() => setIsSidebarOpen(false)}
           />
         </div>
+        {/* Delete conversation confirmation modal */}
+        <ConfirmModal
+          open={!!pendingDeleteConversationId}
+          title="Delete conversation"
+          description={
+            "Are you sure you want to delete this conversation? This action cannot be undone."
+          }
+          onCancel={() => setPendingDeleteConversationId(null)}
+          onConfirm={confirmDeleteConversation}
+          loading={isDeletingConversation}
+        />
       </div>
     </>
   );

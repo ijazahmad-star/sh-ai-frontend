@@ -3,11 +3,79 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useSession, signOut } from "next-auth/react";
-import logopic from "../public/SH-logo.png";
+import lightLogo from "../public/SH-Logos.png";
+import darkLogo from "../public/SH-Logos-1.png";
 import { usePathname } from "next/navigation";
 
 import { Menu, X } from "lucide-react";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
+
+function UserMenu({ user, onSignOut }: { user: any; onSignOut: () => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  return (
+    <div ref={ref} className="relative ml-2">
+      <button
+        onClick={() => setOpen((s) => !s)}
+        className="flex items-center gap-2 text-white hover:opacity-90 rounded px-1 py-1"
+        aria-haspopup="true"
+        aria-expanded={open}
+      >
+        {user.image ? (
+          <img
+            src={user.image}
+            alt={user.name || "User"}
+            className="w-7 h-7 lg:w-8 lg:h-8 rounded-full border border-white/20"
+          />
+        ) : (
+          <div className="w-7 h-7 lg:w-8 lg:h-8 rounded-full bg-primary-500 flex items-center justify-center">
+            <span className="text-xs font-semibold">
+              {user.name?.charAt(0) || "U"}
+            </span>
+          </div>
+        )}
+        {/* <div className="hidden lg:block text-left">
+          <p className="text-sm font-medium">{user.name}</p>
+          <p className="text-xs text-gray-300">({user.role})</p>
+        </div> */}
+      </button>
+
+      {open && (
+        <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-zinc-900 rounded shadow-lg py-2 z-50">
+          <div className="px-4 py-2">
+            <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+              {user.name}
+            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-300">
+              {user.role}
+            </p>
+          </div>
+          <div className="border-t border-gray-100 dark:border-zinc-800" />
+          <button
+            onClick={() => {
+              setOpen(false);
+              onSignOut();
+            }}
+            className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-zinc-800"
+          >
+            Sign out
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function Navigation() {
   const { data: session } = useSession();
@@ -20,7 +88,11 @@ export default function Navigation() {
   const closeMenu = () => {
     setIsMenuOpen(false);
   };
-  const handleSignOut = async () => {
+  const [showSignOutModal, setShowSignOutModal] = useState(false);
+
+  const doSignOut = async () => {
+    setShowSignOutModal(false);
+    localStorage.removeItem("lastConversationId");
     await signOut({ callbackUrl: "/" });
   };
   const Links = [
@@ -40,85 +112,56 @@ export default function Navigation() {
         {/* Logo & Brand */}
         <div className="flex items-center gap-2 sm:gap-3">
           <Image
-            src={logopic}
-            alt="Logo"
+            src={darkLogo}
+            alt="SH Logo (dark)"
             className="rounded-full"
-            width={40}
-            height={40}
+            width={128}
+            height={50}
             priority
           />
-          <span className="text-xl sm:text-2xl font-bold text-white">
-            <span className="text-primary-500">SH</span> AI Assistant
-          </span>
+          {/* <span className="text-xl md:text-base font-bold text-white">
+            AI Assistant
+          </span> */}
         </div>
 
         {/* Desktop Navigation */}
-        <div className="hidden sm:grid grid-flow-col auto-cols-max items-center gap-4">
-          {Links.map(
-            (link, idx) =>
-              link.visible && (
-                <Link
-                  key={idx}
-                  href={link.href}
-                  className={`${
-                    pathname === link.href
-                      ? "text-yellow-500 font-semibold"
-                      : "text-white hover:text-yellow-400"
-                  } text-sm lg:text-base transition-colors px-1 py-2`}
-                >
-                  {link.label}
-                </Link>
-              )
-          )}
+        <div className="hidden md:grid grid-flow-col auto-cols-max items-center gap-4">
+          <div className="container items-center gap-6">
+            {Links.map(
+              (link, idx) =>
+                link.visible && (
+                  <Link
+                    key={idx}
+                    href={link.href}
+                    className={`${
+                      pathname === link.href
+                        ? "text-white font-semibold"
+                        : "text-white hover:text-gray-300"
+                    } text-sm lg:text-base transition-colors px-3 py-2 relative`}
+                  >
+                    {link.label}
+                    {pathname === link.href && (
+                      <span className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-primary-500 rounded-full"></span>
+                    )}
+                  </Link>
+                )
+            )}
+          </div>
 
           {session?.user && (
-            <div className="flex items-center gap-3 lg:gap-4 ml-2">
-              <div className="flex items-center gap-2 text-white">
-                {session.user.image ? (
-                  <img
-                    src={session.user.image}
-                    alt={session.user.name || "User"}
-                    className="w-7 h-7 lg:w-8 lg:h-8 rounded-full border border-white/20"
-                  />
-                ) : (
-                  <div className="w-7 h-7 lg:w-8 lg:h-8 rounded-full bg-primary-500 flex items-center justify-center">
-                    <span className="text-xs font-semibold">
-                      {session.user.name?.charAt(0) || "U"}
-                    </span>
-                  </div>
-                )}
-                <div className="hidden lg:block">
-                  <p className="text-sm font-medium">{session.user.name}</p>
-                  <p className="text-xs text-gray-300">({session.user.role})</p>
-                </div>
-              </div>
-              <button
-                onClick={handleSignOut}
-                className="py-2 px-2 bg-primary-500 hover:bg-red-400 hover:cursor-pointer text-white font-sm rounded-lg flex items-center justify-center gap-2"
-              >
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-                  />
-                </svg>
-                Sign Out
-              </button>
-            </div>
+            <UserMenu
+              user={session.user}
+              onSignOut={() => {
+                setShowSignOutModal(true);
+              }}
+            />
           )}
         </div>
 
         {/* Mobile Menu Button */}
         <button
           onClick={() => handleMenu(!isMenuOpen)}
-          className="sm:hidden text-white p-2 hover:bg-white/10 rounded-lg transition-colors"
+          className="md:hidden text-white p-2 hover:bg-white/10 rounded-lg transition-colors"
           aria-label="Toggle menu"
         >
           {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
@@ -126,13 +169,13 @@ export default function Navigation() {
 
         {isMenuOpen && (
           <div
-            className="fixed inset-0 backdrop-blur-sm bg-black/50 sm:hidden z-40"
+            className="fixed inset-0 backdrop-blur-sm bg-black/50 md:hidden z-40"
             onClick={closeMenu}
           />
         )}
 
         <div
-          className={`fixed top-0 right-0 h-full w-full max-w-xs sm:hidden transform ${
+          className={`fixed top-0 right-0 h-full w-full max-w-xs md:hidden transform ${
             isMenuOpen ? "translate-x-0" : "translate-x-full"
           } transition-transform duration-300 ease-in-out z-50 bg-nav-background shadow-xl`}
         >
@@ -141,13 +184,14 @@ export default function Navigation() {
             <div className="flex items-center justify-between mb-8">
               <div className="flex items-center gap-2">
                 <Image
-                  src={logopic}
-                  alt="Logo"
+                  src={darkLogo}
+                  alt="SH Logo (dark)"
                   className="rounded-full"
                   width={36}
                   height={36}
                 />
-                <span className="text-lg font-bold text-white">
+
+                <span className="text-sm font-semibold text-white">
                   <span className="text-primary-500">SH</span> AI
                 </span>
               </div>
@@ -206,7 +250,7 @@ export default function Navigation() {
                 <button
                   onClick={() => {
                     closeMenu();
-                    handleSignOut();
+                    setShowSignOutModal(true);
                   }}
                   className="w-full py-3 px-4 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
                 >
@@ -229,6 +273,39 @@ export default function Navigation() {
             )}
           </div>
         </div>
+
+        {/* Sign out confirmation modal */}
+        {showSignOutModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <div
+              className="absolute inset-0 bg-black/50"
+              onClick={() => setShowSignOutModal(false)}
+            />
+            <div className="relative bg-white dark:bg-zinc-900 rounded-lg shadow-xl w-full max-w-sm p-6">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Confirm sign out
+              </h3>
+              <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
+                Are you sure you want to sign out? You will need to sign in
+                again to access your account.
+              </p>
+              <div className="mt-4 flex justify-end gap-3">
+                <button
+                  onClick={() => setShowSignOutModal(false)}
+                  className="px-4 py-2 bg-gray-100 dark:bg-zinc-800 rounded-md text-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={doSignOut}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md text-sm"
+                >
+                  Sign out
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </header>
     </div>
   );

@@ -101,7 +101,7 @@ model Document {
   id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid @map("id")
   user_id           String?   @db.Uuid @map("user_id")
   content           String    @map("content")
-  document_metadata Json?     @map("document_metadata")
+  metadata          Json?     @map("metadata")
   embedding         Json      @map("embedding")
   created_at        DateTime? @default(now()) @map("created_at")
   file_id           String?   @db.Uuid @map("file_id")

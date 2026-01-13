@@ -103,7 +103,7 @@ export default function SystemPrompts() {
   // Show loading state if not authenticated
   if (!session?.user?.id) {
     return (
-      <div className="min-h-screen py-8 bg-white dark:from-black dark:to-zinc-900 font-sans">
+      <div className="py-8 font-sans">
         <div className="container dark:text-white">
           <div className="text-center py-12">
             <p className="text-gray-500">Please sign in to manage prompts.</p>
@@ -113,20 +113,20 @@ export default function SystemPrompts() {
     );
   }
   return (
-    <div className="min-h-screen py-4 sm:py-8 bg-white dark:from-black dark:to-zinc-900 font-sans">
+    <div className="py-4 sm:py-8 font-sans">
       <div className="container mx-auto px-3 sm:px-4 dark:text-white">
-        <header className="hero py-6 sm:py-8 p-3 sm:p-4">
+        <header className="py-6 sm:py-8 px-6 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-sm rounded-2xl border border-gray-100 dark:border-zinc-800 shadow-sm mb-8">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <h1 className="text-2xl sm:text-3xl font-extrabold text-black dark:text-white">
                 System Prompts
               </h1>
-              <p className="mt-2 text-sm sm:text-base text-red-600 dark:text-red-500 font-medium">
+              <p className="mt-2 text-sm sm:text-base text-red-600 dark:text-red-500 font-bold">
                 SH AI Assistance!
               </p>
             </div>
             <button
-              className="btn-primary w-full sm:w-auto py-2.5 px-4 text-sm sm:text-base"
+              className="btn-primary w-full sm:w-auto py-2.5 px-6 text-sm sm:text-base shadow-lg shadow-red-600/20"
               onClick={() => setShowComponent(true)}
             >
               + New Prompt
@@ -156,7 +156,7 @@ export default function SystemPrompts() {
             ) : (
               <>
                 {systemPrompts.length === 0 ? (
-                  <div className="text-center py-8 sm:py-12">
+                  <div className="text-center py-8 sm:py-12 dark:bg-zinc-900 shadow-lg">
                     <div className="mx-auto w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gray-100 dark:bg-zinc-800 flex items-center justify-center mb-4">
                       <svg
                         className="w-8 h-8 sm:w-10 sm:h-10 text-gray-400"
@@ -202,7 +202,7 @@ export default function SystemPrompts() {
                             <th className="py-3 px-4 font-semibold">Actions</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-100 dark:divide-zinc-800">
+                        <tbody className="divide-y divide-gray-100 dark:divide-zinc-800 dark:bg-zinc-900 shadow-lg">
                           {systemPrompts.map((sp, index) => (
                             <tr
                               key={index}

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
+import { Loader2, MoreHorizontal } from "lucide-react";
 
 import {
   fetchAllSystemPrompts,
@@ -11,12 +12,19 @@ import {
 import type { Prompt } from "@/types/prompt";
 import SystemPromptEditActions from "./SystemPromptActions";
 import AddNewPrompt from "./AddNewPrompt";
+import ConfirmModal from "@/components/ui/ConfirmModal";
 
 export default function SystemPrompts() {
   const { data: session } = useSession();
   const [systemPrompts, setSystemPrompts] = useState<Prompt[]>([]);
   const [showComponent, setShowComponent] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
+  const [showDeleteModal, setShowDeleteModal] = useState<boolean>(false);
+  const [promptToDelete, setPromptToDelete] = useState<string | null>(null);
+  const [activatingPrompt, setActivatingPrompt] = useState<string | null>(null);
+
+  // Track which prompt's dropdown is open
+  const [openMenuPrompt, setOpenMenuPrompt] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     if (!session?.user?.id) return;
@@ -38,44 +46,35 @@ export default function SystemPrompts() {
     fetchData();
   }, [fetchData]);
 
-  const handleDelete = useCallback(
-    async (name: string) => {
-      if (!session?.user?.id) {
-        console.error("User not authenticated");
-        return;
-      }
+  const handleDelete = useCallback((name: string) => {
+    setPromptToDelete(name);
+    setShowDeleteModal(true);
+  }, []);
 
-      setLoading(true);
-      try {
-        const status = await deleteSystemPrompt(name, session.user.id);
-        if (!status) {
-          console.error("Failed to delete prompt:", name);
-          return;
-        }
-        console.log("Delete prompt with name:", name);
-        setSystemPrompts((prev) => prev.filter((p) => p.name !== name));
-      } finally {
-        setLoading(false);
-      }
-    },
-    [session?.user?.id]
-  );
+  const confirmDelete = useCallback(async () => {
+    if (!session?.user?.id || !promptToDelete) return;
+
+    try {
+      const status = await deleteSystemPrompt(promptToDelete, session.user.id);
+      if (!status) return;
+      setSystemPrompts((prev) => prev.filter((p) => p.name !== promptToDelete));
+    } catch (error) {
+      console.error("Error deleting prompt:", error);
+    } finally {
+      setShowDeleteModal(false);
+      setPromptToDelete(null);
+    }
+  }, [session?.user?.id, promptToDelete]);
 
   const handleSetActive = useCallback(
     async (name: string) => {
-      if (!session?.user?.id) {
-        console.error("User not authenticated");
-        return;
-      }
+      if (!session?.user?.id) return;
 
-      setLoading(true);
+      setActivatingPrompt(name);
       try {
         const status = await setActiveSystemPrompt(name, session.user.id);
-        if (!status) {
-          console.error("Failed to set active prompt:", name);
-          return;
-        }
-        console.log("Set active prompt with name:", name);
+        if (!status) return;
+
         setSystemPrompts((prev) =>
           prev.map((p) =>
             p.name === name
@@ -83,8 +82,10 @@ export default function SystemPrompts() {
               : { ...p, is_active: false }
           )
         );
+      } catch (error) {
+        console.error("Error setting active prompt:", error);
       } finally {
-        setLoading(false);
+        setActivatingPrompt(null);
       }
     },
     [session?.user?.id]
@@ -100,7 +101,6 @@ export default function SystemPrompts() {
     setSystemPrompts((prev) => [...prev, newPrompt]);
   }, []);
 
-  // Show loading state if not authenticated
   if (!session?.user?.id) {
     return (
       <div className="py-8 font-sans">
@@ -135,7 +135,7 @@ export default function SystemPrompts() {
         </header>
 
         <main className="mt-6 sm:mt-8">
-          <div className="card bg-white dark:bg-zinc-900 shadow-lg rounded-xl p-4 sm:p-6">
+          <div className="card bg-white dark:bg-zinc-900 shadow-lg rounded-xl p-4 sm:p-6 overflow-visible">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
               <h2 className="text-lg font-semibold text-black dark:text-white">
                 All Prompts ({systemPrompts.length})
@@ -226,29 +226,59 @@ export default function SystemPrompts() {
                                 </span>
                               </td>
                               <td className="py-4 px-4 text-sm">
-                                <div className="flex items-center gap-2">
-                                  <SystemPromptEditActions
-                                    systemPrompt={sp}
-                                    userId={session.user.id}
-                                    onUpdate={handleOnEditUpdate}
-                                  />
+                                <div className="relative">
                                   <button
-                                    className={`px-3 py-1.5 rounded text-xs font-semibold transition-colors ${
-                                      sp.is_active
-                                        ? "bg-gray-300 text-gray-500 cursor-not-allowed dark:bg-gray-700 dark:text-gray-500"
-                                        : "bg-red-600 text-white hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800"
-                                    }`}
-                                    disabled={sp.is_active}
-                                    onClick={() => handleSetActive(sp.name)}
+                                    onClick={() =>
+                                      setOpenMenuPrompt((prev) =>
+                                        prev === sp.name ? null : sp.name
+                                      )
+                                    }
+                                    className="p-1 rounded hover:bg-zinc-200 dark:hover:bg-zinc-700"
                                   >
-                                    {sp.is_active ? "Active" : "Activate"}
+                                    <MoreHorizontal className="w-4 h-4 cursor-pointer" />
                                   </button>
-                                  <button
-                                    className="px-3 py-1.5 rounded text-xs font-semibold bg-red-700 hover:bg-red-800 text-white dark:bg-red-800 dark:hover:bg-red-900 transition-colors"
-                                    onClick={() => handleDelete(sp.name)}
-                                  >
-                                    Delete
-                                  </button>
+
+                                  {openMenuPrompt === sp.name && (
+                                    <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg shadow-xl z-9999 py-2">
+                                      <div className="flex flex-col gap-2 px-2">
+                                        <SystemPromptEditActions
+                                          systemPrompt={sp}
+                                          userId={session.user.id}
+                                          onUpdate={handleOnEditUpdate}
+                                        />
+
+                                        <button
+                                          className={`px-3 py-1.5 rounded text-xs font-semibold transition-colors flex items-center justify-center gap-1 ${
+                                            sp.is_active
+                                              ? "bg-gray-300 text-gray-500 cursor-not-allowed dark:bg-gray-700 dark:text-gray-500"
+                                              : "bg-red-600 text-white hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800"
+                                          }`}
+                                          disabled={
+                                            sp.is_active ||
+                                            activatingPrompt === sp.name
+                                          }
+                                          onClick={() =>
+                                            handleSetActive(sp.name)
+                                          }
+                                        >
+                                          {activatingPrompt === sp.name ? (
+                                            <Loader2 className="w-3 h-3 animate-spin" />
+                                          ) : sp.is_active ? (
+                                            "Active"
+                                          ) : (
+                                            "Activate"
+                                          )}
+                                        </button>
+
+                                        <button
+                                          className="px-3 py-1.5 rounded text-xs font-semibold bg-red-700 hover:bg-red-800 text-white dark:bg-red-800 dark:hover:bg-red-900 transition-colors"
+                                          onClick={() => handleDelete(sp.name)}
+                                        >
+                                          Delete
+                                        </button>
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
                               </td>
                             </tr>
@@ -299,15 +329,23 @@ export default function SystemPrompts() {
                                   onUpdate={handleOnEditUpdate}
                                 />
                                 <button
-                                  className={`flex-1 px-3 py-2 rounded text-xs font-semibold transition-colors ${
+                                  className={`flex-1 px-3 py-2 rounded text-xs font-semibold transition-colors flex items-center justify-center gap-1 ${
                                     sp.is_active
                                       ? "bg-gray-300 text-gray-500 cursor-not-allowed dark:bg-gray-700 dark:text-gray-500"
                                       : "bg-red-600 text-white hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800"
                                   }`}
-                                  disabled={sp.is_active}
+                                  disabled={
+                                    sp.is_active || activatingPrompt === sp.name
+                                  }
                                   onClick={() => handleSetActive(sp.name)}
                                 >
-                                  {sp.is_active ? "Active" : "Activate"}
+                                  {activatingPrompt === sp.name ? (
+                                    <Loader2 className="w-3 h-3 animate-spin" />
+                                  ) : sp.is_active ? (
+                                    "Active"
+                                  ) : (
+                                    "Activate"
+                                  )}
                                 </button>
                                 <button
                                   className="flex-1 px-3 py-2 rounded text-xs font-semibold bg-red-700 hover:bg-red-800 text-white dark:bg-red-800 dark:hover:bg-red-900 transition-colors"
@@ -340,6 +378,27 @@ export default function SystemPrompts() {
               </div>
             </div>
           )}
+
+          {/* Delete Confirmation Modal */}
+          <ConfirmModal
+            open={showDeleteModal}
+            title="Delete Prompt"
+            description={
+              <>
+                Are you sure you want to delete the prompt{" "}
+                <strong>"{promptToDelete}"</strong>? This action cannot be
+                undone.
+              </>
+            }
+            confirmLabel="Delete"
+            cancelLabel="Cancel"
+            onConfirm={confirmDelete}
+            onCancel={() => {
+              setShowDeleteModal(false);
+              setPromptToDelete(null);
+            }}
+            maxWidthClass="max-w-md"
+          />
         </main>
       </div>
     </div>

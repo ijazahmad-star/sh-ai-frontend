@@ -5,6 +5,7 @@ import { signIn, useSession } from "next-auth/react";
 import { useEffect, useState, useCallback } from "react";
 import Image from "next/image";
 import Footer from "@/components/Footer";
+import { Eye, EyeOff } from "lucide-react";
 
 import lightLogo from "@/public/SH-Logos.png";
 import darkLogo from "@/public/SH-Logos-1.png";
@@ -12,16 +13,21 @@ import darkLogo from "@/public/SH-Logos-1.png";
 export default function SignInPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const searchParams = new URLSearchParams(
+    typeof window !== "undefined" ? window.location.search : ""
+  );
+  const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     if (session) {
-      router.push("/dashboard");
+      router.push(callbackUrl);
     }
-  }, [session, router]);
+  }, [session, router, callbackUrl]);
 
   const handleEmailAuth = useCallback(
     async (e: React.FormEvent) => {
@@ -34,6 +40,7 @@ export default function SignInPage() {
           email,
           password,
           redirect: false,
+          callbackUrl,
         });
 
         if (result?.error) {
@@ -42,51 +49,48 @@ export default function SignInPage() {
           return;
         }
 
-        router.push("/dashboard");
+        router.push(callbackUrl);
       } catch (error) {
         setError("Something went wrong");
         setIsLoading(false);
       }
     },
-    [email, password, router]
+    [email, password, router, callbackUrl]
   );
 
   return (
     <div className="min-h-screen py-4 bg-linear-to-b from-white to-zinc-50 dark:from-black dark:to-zinc-900 font-sans">
       <div className="container min-w-screen">
-        <header className="py-4">
-          <h1 className="text-4xl text-center sm:text-5xl font-extrabold text-black dark:text-white">
-            Smart SH AI Assistant
-          </h1>
-          <p className="mt-3 text-center text-base text-red-600 dark:text-red-500 font-semibold">
-            Secure. Smart. Intelligent.
-          </p>
+        <header className="py-4 justify-center flex flex-col items-center">
+          <>
+            <Image
+              src={lightLogo}
+              alt="SH Logo"
+              className="rounded-full block dark:hidden"
+              width={350}
+              height={350}
+              priority
+            />
+            <Image
+              src={darkLogo}
+              alt="SH Logo (dark)"
+              className="rounded-full hidden dark:block"
+              width={350}
+              height={350}
+              priority
+            />
+          </>
         </header>
 
         <main className="mt-8 flex flex-col lg:flex-row items-center justify-center gap-8 lg:gap-12 px-4">
           <div className="flex flex-col items-center justify-center lg:w-1/2 max-w-md">
-            <>
-              <Image
-                src={lightLogo}
-                alt="SH Logo"
-                className="rounded-full block dark:hidden"
-                width={350}
-                height={350}
-                priority
-              />
-              <Image
-                src={darkLogo}
-                alt="SH Logo (dark)"
-                className="rounded-full hidden dark:block"
-                width={350}
-                height={350}
-                priority
-              />
-            </>
             <div className="mt-6 text-center">
-              <h3 className="text-xl font-bold text-black dark:text-white">
-                SH AI Assistant
-              </h3>
+              <h1 className="text-4xl text-center sm:text-5xl font-extrabold text-black dark:text-white">
+                Smart SH AI Assistant
+              </h1>
+              <p className="mt-3 text-center text-base text-red-600 dark:text-red-500 font-semibold">
+                Secure. Smart. Intelligent.
+              </p>
               <p className="mt-2 text-gray-600 dark:text-gray-400">
                 Intelligent solutions for your daily tasks
               </p>
@@ -136,15 +140,24 @@ export default function SignInPage() {
                   >
                     Password
                   </label>
-                  <input
-                    id="password"
-                    type="password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-700 rounded-md focus:outline-none focus:ring-2 focus:ring-red-600 bg-white dark:bg-zinc-800 text-gray-900 dark:text-white"
-                    placeholder="Your password"
-                  />
+                  <div className="relative">
+                    <input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="w-full px-3 py-2 pr-10 border border-gray-300 dark:border-zinc-700 rounded-md focus:outline-none focus:ring-2 focus:ring-red-600 bg-white dark:bg-zinc-800 text-gray-900 dark:text-white"
+                      placeholder="Your password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors"
+                    >
+                      {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                    </button>
+                  </div>
                 </div>
 
                 {error && (

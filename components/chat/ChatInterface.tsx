@@ -85,19 +85,43 @@ export default function ChatInterface() {
 
   const loadConversation = useCallback(async (conversationId: string) => {
     setLoadingCov(true);
+  
     try {
       const res = await fetch(`/api/chat/conversations/${conversationId}`);
-      if (res.ok) {
-        const conversation = await res.json();
-        setMessages(conversation.messages || []);
-        setCurrentConversationId(conversationId);
-      }
-    } catch (e) {
-      console.error("Failed to load conversation:", e);
+      if (!res.ok) throw new Error("Failed to fetch conversation");
+  
+      const conversation = await res.json();
+      const messages: Message[] = conversation.messages || [];
+  
+      const processedMessages = messages.map((msg, idx) => {
+        let userQuery = "";
+  
+        if (msg.role === "assistant") {
+          const lastUserMessage = messages
+            .slice(0, idx)
+            .reverse()
+            .find((m) => m.role === "user");
+  
+          if (lastUserMessage) userQuery = lastUserMessage.content;
+        }
+  
+        return {
+          ...msg,
+          conversation_id: conversationId,
+          user_id: session?.user?.id,
+          user_query: userQuery,
+          sources: msg.sources || [],
+        };
+      });
+  
+      setMessages(processedMessages);
+      setCurrentConversationId(conversationId);
+    } catch (error) {
+      console.error("Failed to load conversation:", error);
     } finally {
       setLoadingCov(false);
     }
-  }, []);
+  }, [session?.user?.id]);
 
   const createNewConversation = useCallback(async () => {
     try {
@@ -155,10 +179,13 @@ export default function ChatInterface() {
 
       // AI message with sources
       const aiMessage: Message = {
-        id: String(Date.now()) + "-a",
+        id: response?.message_id || (String(Date.now()) + "-a"), // Use real message ID if available
         role: "assistant",
         content: response?.response ?? "(no response)",
         sources: response?.sources?.map((s) => s.source) || [],
+        user_query: userMessage.content,
+        conversation_id: conversationId,
+        user_id: session?.user?.id,
       };
 
       // append AI message and clear loading state immediately

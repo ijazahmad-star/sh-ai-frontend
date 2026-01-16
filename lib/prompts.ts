@@ -122,15 +122,15 @@ export const getAiResponse = async (
   userId: string,
   kbType: "default" | "custom" = "default",
   conversationId: string
-): Promise<{ response: string; sources: any[] } | null> => {
+): Promise<{ response: string; sources: any[]; message_id?: string } | null> => {
   try {
     const res = await fetch(`${API_BASE}/query`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ 
-        query, 
+      body: JSON.stringify({
+        query,
         user_id: userId,
-        kb_type: kbType, 
+        kb_type: kbType,
         conversation_id: conversationId
       }),
     });
@@ -142,12 +142,39 @@ export const getAiResponse = async (
     const body = await res.json();
     return {
       response: body.response || "",
-      sources: body.sources || []
+      sources: body.sources || [],
+      message_id: body.message_id
     };
   } catch (e) {
     console.error("getAiResponse:", e);
     return null;
   }
 }
+
+export const generatePrompt = async (
+  requirements: string,
+  userId: string
+): Promise<{ status: string; generated_prompt: string; user_id: string } | null> => {
+  try {
+    const res = await fetch(`${API_BASE}/generate_prompt`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        requirements: requirements,
+        user_id: userId,
+      }),
+    });
+
+    if (!res.ok) {
+      console.error("Failed to generate prompt", res.status);
+      return null;
+    }
+    const body = await res.json();
+    return body;
+  } catch (e) {
+    console.error("generatePrompt:", e);
+    return null;
+  }
+};
 
 // uploadFile function removed - upload is now handled in Knowledge Base page

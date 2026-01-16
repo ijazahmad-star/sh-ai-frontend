@@ -250,7 +250,7 @@ export default function UsersClient({
                       </button>
                       <button
                         onClick={() => handleDeleteUser(user.id)}
-                        className="px-3 py-1 rounded text-xs font-semibold bg-red-600 text-white hover:bg-red-700"
+                        className="px-3 py-1 rounded text-xs font-semibold bg-primary-500 text-white hover:bg-primary-700"
                       >
                         Delete
                       </button>

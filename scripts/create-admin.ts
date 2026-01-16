@@ -7,7 +7,7 @@ import bcrypt from "bcryptjs";
 async function createAdminUser() {
   try {
     // Create connection directly
-    const connectionString = "place your string";
+    const connectionString = process.env.DATABASE_URL;
     if (!connectionString) {
       throw new Error("DATABASE_URL is not set");
     }
@@ -27,17 +27,16 @@ async function createAdminUser() {
         password: hashedPassword,
         name: "Admin User",
         role: "admin",
-        kb_access: {       
+        kb_access: {
           create: {
-            hasAccessToDefaultKB: true
-          }
+            hasAccessToDefaultKB: true,
+          },
         },
       },
       include: {
-        kb_access: true  
-      }
-    })
-    
+        kb_access: true,
+      },
+    });
 
     console.log("✅ Admin user created successfully!");
     console.log("Email: admin@example.com");

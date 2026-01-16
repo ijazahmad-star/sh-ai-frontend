@@ -7,15 +7,15 @@ datasource db {
 }
 
 model User {
-  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid @map("id")
-  email          String    @unique @map("email")
-  name           String?   @map("name")
-  image          String?   @map("image")
-  emailVerified  DateTime? @map("email_verified")
-  createdAt      DateTime? @default(now()) @map("created_at")
-  updatedAt      DateTime? @updatedAt @map("updated_at")
-  password       String?   @map("password")
-  role           String    @default("user") @map("role")
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @map("id") @db.Uuid
+  email         String    @unique @map("email")
+  name          String?   @map("name")
+  image         String?   @map("image")
+  emailVerified DateTime? @map("email_verified")
+  createdAt     DateTime? @default(now()) @map("created_at")
+  updatedAt     DateTime? @updatedAt @map("updated_at")
+  password      String?   @map("password")
+  role          String    @default("user") @map("role")
 
   files         UserFile[]
   prompts       Prompt[]
@@ -23,27 +23,28 @@ model User {
   kb_access     KBAccess?
   messages      Message[]
   documents     Document[]
+  feedbacks     Feedback[]
 
   @@map("users")
 }
 
 model UserFile {
-  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid @map("id")
-  user_id      String    @db.Uuid @map("user_id")
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @map("id") @db.Uuid
+  user_id      String    @map("user_id") @db.Uuid
   filename     String    @map("filename")
   storage_path String    @map("storage_path")
   created_at   DateTime? @default(now()) @map("created_at")
 
-  user      User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  messages  Message[] @relation("UserFileMessages")
+  user      User       @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  messages  Message[]  @relation("UserFileMessages")
   documents Document[]
 
   @@map("user_files")
 }
 
 model Prompt {
-  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid @map("id")
-  user_id   String?   @db.Uuid @map("user_id")
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @map("id") @db.Uuid
+  user_id   String?   @map("user_id") @db.Uuid
   prompt    String    @map("prompt")
   createdAt DateTime? @default(now()) @map("created_at")
   updatedAt DateTime? @updatedAt @map("updated_at")
@@ -56,23 +57,24 @@ model Prompt {
 }
 
 model Conversation {
-  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid @map("id")
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @map("id") @db.Uuid
   title     String?   @default("New Chat") @map("title")
-  user_id   String    @db.Uuid @map("user_id")
+  user_id   String    @map("user_id") @db.Uuid
   createdAt DateTime? @default(now()) @map("created_at")
   updatedAt DateTime? @updatedAt @map("updated_at")
 
-  user      User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  messages Message[]
+  user      User       @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  messages  Message[]
+  feedbacks Feedback[]
 
   @@map("conversations")
 }
 
 model Message {
-  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid @map("id")
-  conversation_id String    @db.Uuid @map("conversation_id")
-  user_id         String    @db.Uuid @map("user_id")
-  user_file_id    String?   @db.Uuid @map("user_file_id")
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @map("id") @db.Uuid
+  conversation_id String    @map("conversation_id") @db.Uuid
+  user_id         String    @map("user_id") @db.Uuid
+  user_file_id    String?   @map("user_file_id") @db.Uuid
   role            String    @map("role")
   content         String    @map("content")
   createdAt       DateTime? @default(now()) @map("created_at")
@@ -86,8 +88,8 @@ model Message {
 }
 
 model KBAccess {
-  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid @map("id")
-  user_id              String    @unique @db.Uuid @map("user_id")
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @map("id") @db.Uuid
+  user_id              String    @unique @map("user_id") @db.Uuid
   hasAccessToDefaultKB Boolean   @default(false) @map("has_access_to_default_kb")
   createdAt            DateTime? @default(now()) @map("created_at")
   updatedAt            DateTime? @updatedAt @map("updated_at")
@@ -98,16 +100,33 @@ model KBAccess {
 }
 
 model Document {
-  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid @map("id")
-  user_id           String?   @db.Uuid @map("user_id")
-  content           String    @map("content")
-  metadata          Json?     @map("metadata")
-  embedding         Json      @map("embedding")
-  created_at        DateTime? @default(now()) @map("created_at")
-  file_id           String?   @db.Uuid @map("file_id")
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @map("id") @db.Uuid
+  user_id    String?   @map("user_id") @db.Uuid
+  content    String    @map("content")
+  metadata   Json?     @map("metadata")
+  embedding  Json      @map("embedding")
+  created_at DateTime? @default(now()) @map("created_at")
+  file_id    String?   @map("file_id") @db.Uuid
 
   user User?     @relation(fields: [user_id], references: [id], onDelete: Cascade)
   file UserFile? @relation(fields: [file_id], references: [id], onDelete: Cascade)
 
   @@map("documents")
+}
+
+model Feedback {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @map("id") @db.Uuid
+  user_id         String    @map("user_id") @db.Uuid
+  conversation_id String    @map("conversation_id") @db.Uuid
+  conv_msg_id     String    @map("conv_msg_id") @db.Text  // Add @db.Text
+  ai_response     String    @map("ai_response")
+  user_query      String?   @map("user_query")
+  thumb           String    @default("up") @map("thumb")
+  comment         String?   @map("comment")
+  createdAt       DateTime? @default(now()) @map("created_at")
+
+  user         User         @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  conversation Conversation @relation(fields: [conversation_id], references: [id], onDelete: Cascade)
+
+  @@map("feedbacks")
 }

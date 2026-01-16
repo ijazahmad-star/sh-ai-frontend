@@ -97,13 +97,19 @@ export default function Navigation() {
   };
   const Links = [
     { href: "/dashboard", label: "Dashboard", visible: true },
+    { href: "/chat", label: "AI Chat", visible: true },
+    { href: "/prompts/system-prompts", label: "System Prompts", visible: true },
+    { href: "/prompts/generator", label: "Prompt Generator", visible: true },
     {
       href: "/admin/users",
       label: "Manage Users",
       visible: session?.user.role === "admin",
     },
-    { href: "/prompts/system-prompts", label: "System Prompts", visible: true },
-    { href: "/chat", label: "AI Chat", visible: true },
+    {
+      href: "/admin/feedback-analytics",
+      label: "Feedback Analytics",
+      visible: session?.user.role === "admin",
+    },
     { href: "/knowledge-base", label: "Personal Database", visible: true },
   ];
   return (
@@ -119,14 +125,11 @@ export default function Navigation() {
             height={50}
             priority
           />
-          {/* <span className="text-xl md:text-base font-bold text-white">
-            AI Assistant
-          </span> */}
         </div>
 
-        {/* Desktop Navigation */}
-        <div className="hidden md:grid grid-flow-col auto-cols-max items-center gap-4">
-          <div className="container items-center gap-6">
+        {/* Desktop Navigation - Centered */}
+        <div className="hidden md:flex items-center justify-center flex-1">
+          <nav className="flex items-center gap-6">
             {Links.map(
               (link, idx) =>
                 link.visible && (
@@ -146,8 +149,11 @@ export default function Navigation() {
                   </Link>
                 )
             )}
-          </div>
+          </nav>
+        </div>
 
+        {/* User Menu - Right Side */}
+        <div className="hidden md:flex">
           {session?.user && (
             <UserMenu
               user={session.user}

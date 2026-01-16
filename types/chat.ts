@@ -15,6 +15,9 @@ export interface Message {
   content: string;
   sources?: Source[];
   createdAt?: Date | string;
+  user_query?: string;
+  conversation_id?: string;
+  user_id?: string;
 }
 
 export interface Conversation {
@@ -25,4 +28,3 @@ export interface Conversation {
   updatedAt: Date | string;
   messages?: Message[];
 }
-

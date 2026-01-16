@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Loader2 } from "lucide-react";
 import { updateSystemPrompt } from "@/lib/prompts";
 import type { Prompt } from "@/types/prompt";
 
@@ -15,12 +16,14 @@ export default function SystemPromptEditActions({
 }) {
   const [showModal, setShowModal] = useState(false);
   const [editedPrompt, setEditedPrompt] = useState(systemPrompt.prompt);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleEdit = () => {
     setShowModal(true);
   };
 
   const handleSaveEditChange = async () => {
+    setIsLoading(true);
     try {
       const ok = await updateSystemPrompt(
         systemPrompt.name,
@@ -38,10 +41,12 @@ export default function SystemPromptEditActions({
         console.error("Error in onUpdate callback:", e);
       }
       console.log("Updated prompt with name:", systemPrompt.name);
+      setShowModal(false);
     } catch (error) {
       console.error("Error updating prompt:", error);
+    } finally {
+      setIsLoading(false);
     }
-    setShowModal(false);
   };
 
   return (
@@ -66,16 +71,25 @@ export default function SystemPromptEditActions({
             />
             <div className="mt-6 flex justify-end gap-3">
               <button
-                className="px-4 py-2 rounded-lg font-semibold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 transition-colors"
+                className="px-4 py-2 rounded-lg font-semibold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={() => setShowModal(false)}
+                disabled={isLoading}
               >
                 Cancel
               </button>
               <button
-                className="btn-primary px-6 py-2 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700 transition-colors"
+                className="btn-primary px-6 py-2 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700 transition-colors flex items-center gap-2"
                 onClick={handleSaveEditChange}
+                disabled={isLoading}
               >
-                Save Changes
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  "Save Changes"
+                )}
               </button>
             </div>
           </div>

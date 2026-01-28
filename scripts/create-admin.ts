@@ -1,56 +1,51 @@
 import "dotenv/config";
-import { PrismaClient } from "@prisma/client";
-import { PrismaPg } from "@prisma/adapter-pg";
-import { Pool } from "pg";
+import { db } from "../database/db.js";
+import { users, kbAccess } from "../database/schema.js";
+import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 
 async function createAdminUser() {
   try {
-    // Create connection directly
-    const connectionString = process.env.DATABASE_URL;
-    if (!connectionString) {
-      throw new Error("DATABASE_URL is not set");
+    console.log("Creating admin user...");
+
+    // Check if admin already exists
+    const existingAdmin = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, "admin@strategisthub.com"))
+      .limit(1);
+
+    if (existingAdmin.length > 0) {
+      console.log("⚠️  Admin user already exists");
+      return;
     }
 
-    console.log("Connecting to database...");
-    const pool = new Pool({ connectionString });
-    const adapter = new PrismaPg(pool);
-    const prisma = new PrismaClient({ adapter });
-
     // Create admin user
-    console.log("Creating admin user...");
     const hashedPassword = await bcrypt.hash("admin@123456", 10);
 
-    const adminUser = await prisma.user.create({
-      data: {
-        email: "admin@example.com",
+    const [admin] = await db
+      .insert(users)
+      .values({
+        email: "admin@strategisthub.com",
         password: hashedPassword,
         name: "Admin User",
         role: "admin",
-        kbAccess: {
-          create: {
-            hasAccessToDefaultKB: true,
-          },
-        },
-      },
-      include: {
-        kbAccess: true,
-      },
+      })
+      .returning();
+
+    // Create KB access for admin
+    await db.insert(kbAccess).values({
+      userId: admin.id,
+      hasAccessToDefaultKB: true,
     });
 
     console.log("✅ Admin user created successfully!");
-    console.log("Email: admin@example.com");
+    console.log("Email: admin@strategisthub.com");
     console.log("Password: admin@123456");
     console.log("Role: admin");
-
-    await prisma.$disconnect();
   } catch (error: any) {
-    if (error.code === "P2002") {
-      console.log("⚠️  Admin user already exists");
-    } else {
-      console.error("❌ Error creating admin user:", error.message);
-      console.error("Full error:", error);
-    }
+    console.error("❌ Error creating admin user:", error.message);
+    console.error("Full error:", error);
     process.exit(1);
   }
 }

@@ -1,0 +1,20 @@
+{
+  "version": "5",
+  "dialect": "pg",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1769507220941,
+      "tag": "0000_many_shadow_king",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1769511767966,
+      "tag": "0001_amusing_layla_miller",
+      "breakpoints": true
+    }
+  ]
+}

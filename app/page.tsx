@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import lightLogo from "../public/SH-Logos.png";
 import darkLogo from "../public/SH-Logos-1.png";
 import Footer from "@/components/Footer";
+import { Button } from "@/components/ui/button"
 
 import FeatureCard from "@/components/homepage/FeatureCard";
 import ChatMessage from "@/components/homepage/ChatMessage";
@@ -48,7 +49,7 @@ export default function HomePage() {
           <div className="flex justify-center mt-6">
             <Link
               href="/auth/signin"
-              className="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition-colors"
+              className="px-6 py-2.5 bg-primary-500 hover:bg-red-700 text-white rounded-lg font-semibold transition-colors"
             >
               Get Started
             </Link>
@@ -62,7 +63,7 @@ export default function HomePage() {
               <h1 className="text-4xl text-center sm:text-5xl font-extrabold text-black dark:text-white">
                 Smart SH AI Assistant
               </h1>
-              <p className="mt-3 text-center text-base text-red-600 dark:text-red-500 font-semibold">
+              <p className="mt-3 text-center text-base text-primary-500 dark:text-primary-500 font-semibold">
                 Secure. Smart. Intelligent.
               </p>
               <p className="mt-2 text-gray-600 dark:text-gray-400">
@@ -120,13 +121,13 @@ export default function HomePage() {
                       className="w-full bg-transparent text-gray-900 dark:text-white text-sm outline-none placeholder-gray-500 dark:placeholder-gray-400"
                     />
                   </div>
-                  <button
+                  <Button
                     type="button"
                     onClick={handleButtonClick}
-                    className="p-3 bg-red-600 hover:bg-red-700 text-white rounded-xl transition-colors"
+                    className="w-12 h-11"
                   >
-                    <MessageCircle className="w-5 h-5" />
-                  </button>
+                    <MessageCircle />
+                  </Button>
                 </form>
               </div>
             </div>

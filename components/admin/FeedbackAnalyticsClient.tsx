@@ -1,7 +1,15 @@
 "use client";
 
 import { useState } from "react";
-
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { ThumbsDown, ThumbsUpIcon } from "lucide-react";
 interface User {
   id: string;
   name: string | null;
@@ -11,12 +19,12 @@ interface User {
 
 interface Feedback {
   id: string;
-  ai_response: string;
-  user_query: string;
+  aiResponse: string;
+  userQuery: string | null;
   thumb: string;
   comment: string | null;
-  createdAt: string;
-  conversation_id: string;
+  createdAt: Date | string;
+  conversationId: string;
 }
 
 interface Props {
@@ -37,8 +45,8 @@ function feedbacksToCSV(feedbacks: Feedback[], userName: string) {
     userName,
     new Date(fb.createdAt).toISOString(),
     fb.thumb,
-    '"' + (fb.user_query || "").replace(/"/g, '""') + '"',
-    '"' + (fb.ai_response || "").replace(/"/g, '""') + '"',
+    '"' + (fb.userQuery || "").replace(/"/g, '""') + '"',
+    '"' + (fb.aiResponse || "").replace(/"/g, '""') + '"',
     '"' + (fb.comment || "").replace(/"/g, '""') + '"',
   ]);
   return [header, ...rows].map((r) => r.join(",")).join("\n");
@@ -58,7 +66,7 @@ export default function FeedbackAnalyticsClient({ initialUsers }: Props) {
 
     try {
       const response = await fetch(
-        `/api/admin/feedback-analytics?userId=${user.id}`
+        `/api/admin/feedback-analytics?userId=${user.id}`,
       );
       if (response.ok) {
         const data = await response.json();
@@ -76,7 +84,7 @@ export default function FeedbackAnalyticsClient({ initialUsers }: Props) {
 
     const csv = feedbacksToCSV(
       feedbacks,
-      selectedUser.name || selectedUser.email
+      selectedUser.name || selectedUser.email,
     );
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
@@ -96,52 +104,50 @@ export default function FeedbackAnalyticsClient({ initialUsers }: Props) {
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-gray-200 dark:border-zinc-700">
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">
-                Name
-              </th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">
+        <Table className="w-full">
+          <TableHeader>
+            <TableRow>
+              <TableHead className="text-black dark:text-white">Name</TableHead>
+              <TableHead className="text-black dark:text-white">
                 Email
-              </th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">
+              </TableHead>
+              <TableHead className="text-black dark:text-white">
                 Feedback Count
-              </th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">
+              </TableHead>
+              <TableHead className="text-black dark:text-white">
                 Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody>
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {users.map((user) => (
-              <tr
+              <TableRow
                 key={user.id}
                 className="border-b border-gray-100 dark:border-zinc-800 hover:bg-gray-50 dark:hover:bg-zinc-800"
               >
-                <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
+                <TableCell className="px-4 py-3 text-sm text-gray-900 dark:text-white">
                   {user.name || "-"}
-                </td>
-                <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
+                </TableCell>
+                <TableCell className="px-4 py-3 text-sm text-gray-900 dark:text-white">
                   {user.email}
-                </td>
-                <td className="px-4 py-3 text-sm">
+                </TableCell>
+                <TableCell className="px-4 py-3 text-sm">
                   <span className="px-2 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-200">
                     {user.feedbacks.length}
                   </span>
-                </td>
-                <td className="px-4 py-3 text-sm space-x-2">
+                </TableCell>
+                <TableCell className="px-4 py-3 text-sm space-x-2">
                   <button
                     onClick={() => handleViewFeedback(user)}
                     className="px-3 py-1 rounded btn-primary hover:bg-primary-700 text-xs"
                   >
                     View Feedback
                   </button>
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
 
       {/* Modal */}
@@ -159,10 +165,7 @@ export default function FeedbackAnalyticsClient({ initialUsers }: Props) {
               </div>
               <div className="flex items-center space-x-3">
                 {feedbacks.length > 0 && (
-                  <button
-                    onClick={handleDownloadCSV}
-                    className="btn-primary"
-                  >
+                  <button onClick={handleDownloadCSV} className="btn-primary">
                     Download CSV
                   </button>
                 )}
@@ -186,65 +189,65 @@ export default function FeedbackAnalyticsClient({ initialUsers }: Props) {
                 </p>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-gray-200 dark:border-zinc-700">
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">
+                  <Table className="w-full">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-black dark:text-white">
                           Date
-                        </th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">
+                        </TableHead>
+                        <TableHead className="text-black dark:text-white">
                           Thumb
-                        </th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">
+                        </TableHead>
+                        <TableHead className="text-black dark:text-white">
                           User Query
-                        </th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">
+                        </TableHead>
+                        <TableHead className="text-black dark:text-white">
                           AI Response
-                        </th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">
+                        </TableHead>
+                        <TableHead className="text-black dark:text-white">
                           Comment
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
                       {feedbacks.map((fb) => (
-                        <tr
+                        <TableRow
                           key={fb.id}
                           className="border-b border-gray-100 dark:border-zinc-800"
                         >
-                          <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
+                          <TableCell className="px-4 py-3 text-sm text-gray-900 dark:text-white">
                             {new Date(fb.createdAt).toLocaleString()}
-                          </td>
-                          <td className="px-4 py-3 text-sm">
+                          </TableCell>
+                          <TableCell className="px-4 py-3 text-sm">
                             <span
                               className={`px-2 py-1 rounded-full text-xs font-semibold ${
                                 fb.thumb === "up"
-                                  ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-200"
+                                  ? "bg -green-100 text-green-800 dark:bg-green-900/20 dark:text-green-200"
                                   : "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-200"
                               }`}
                             >
                               {fb.thumb === "up" ? "👍 Up" : "👎 Down"}
                             </span>
-                          </td>
-                          <td
+                          </TableCell>
+                          <TableCell
                             className="px-4 py-3 text-sm text-gray-900 dark:text-white max-w-xs truncate"
-                            title={fb.user_query}
+                            title={fb.userQuery || ""}
                           >
-                            {fb.user_query}
-                          </td>
-                          <td
+                            {fb.userQuery}
+                          </TableCell>
+                          <TableCell
                             className="px-4 py-3 text-sm text-gray-900 dark:text-white max-w-xs truncate"
-                            title={fb.ai_response}
+                            title={fb.aiResponse || ""}
                           >
-                            {fb.ai_response}
-                          </td>
-                          <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
+                            {fb.aiResponse}
+                          </TableCell>
+                          <TableCell className="px-4 py-3 text-sm text-gray-900 dark:text-white">
                             {fb.comment || "-"}
-                          </td>
-                        </tr>
+                          </TableCell>
+                        </TableRow>
                       ))}
-                    </tbody>
-                  </table>
+                    </TableBody>
+                  </Table>
                 </div>
               )}
             </div>

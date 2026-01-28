@@ -19,7 +19,7 @@ export default function ChatMessage({
       className={`flex gap-3 ${isUser ? "justify-end" : "justify-start"} mb-4`}
     >
       {!isUser && (
-        <div className="w-8 h-8 bg-red-600 rounded-full flex items-center justify-center shrink-0">
+        <div className="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center shrink-0">
           <Bot className="w-4 h-4 text-white" />
         </div>
       )}
@@ -27,7 +27,7 @@ export default function ChatMessage({
         <div
           className={`px-4 py-3 rounded-2xl ${
             isUser
-              ? "bg-red-600 text-white ml-auto"
+              ? "bg-primary-500 text-white ml-auto"
               : "bg-gray-100 dark:bg-zinc-800 text-gray-900 dark:text-white"
           }`}
         >

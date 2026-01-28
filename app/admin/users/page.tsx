@@ -1,7 +1,9 @@
 import Navigation from "@/components/Navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/database/db";
+import { users, kbAccess } from "@/database/schema";
+import { eq, desc } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import UsersClient from "@/components/admin/UsersClient";
 import Link from "next/link";
@@ -12,7 +14,7 @@ interface User {
   name: string | null;
   role: string;
   createdAt: string;
-  kb_access?: {
+  kbAccess?: {
     hasAccessToDefaultKB: boolean;
   };
 }
@@ -24,23 +26,22 @@ export default async function AdminUsersPage() {
     redirect("/dashboard");
   }
 
-  const users = await prisma.user.findMany({
-    select: {
-      id: true,
-      email: true,
-      name: true,
-      role: true,
-      createdAt: true,
-      kb_access: {
-        select: {
-          hasAccessToDefaultKB: true,
-        },
+  const allUsers = await db
+    .select({
+      id: users.id,
+      email: users.email,
+      name: users.name,
+      role: users.role,
+      createdAt: users.createdAt,
+      kbAccess: {
+        hasAccessToDefaultKB: kbAccess.hasAccessToDefaultKB,
       },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+    })
+    .from(users)
+    .leftJoin(kbAccess, eq(users.id, kbAccess.userId))
+    .orderBy(desc(users.createdAt));
 
-  const serializableUsers: User[] = users.map((u) => ({
+  const serializableUsers: User[] = allUsers.map((u) => ({
     id: u.id,
     email: u.email,
     name: u.name,
@@ -48,8 +49,8 @@ export default async function AdminUsersPage() {
     createdAt: u.createdAt
       ? u.createdAt.toISOString()
       : new Date().toISOString(),
-    kb_access: u.kb_access
-      ? { hasAccessToDefaultKB: u.kb_access.hasAccessToDefaultKB }
+    kbAccess: u.kbAccess
+      ? { hasAccessToDefaultKB: u.kbAccess.hasAccessToDefaultKB || false }
       : undefined,
   }));
 

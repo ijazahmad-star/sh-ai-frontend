@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, memo } from "react";
+import { useState, memo, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import {
   generatePrompt,
@@ -9,6 +9,9 @@ import {
 } from "@/lib/prompts";
 import type { Prompt } from "@/types/prompt";
 import { Wand2, Save, Play, RotateCcw, Loader2, Copy } from "lucide-react";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
+import { Textarea } from "../ui/textarea";
 
 interface PromptGeneratorProps {
   onPromptAdded?: (newPrompt: Prompt) => void;
@@ -19,10 +22,36 @@ const PromptGenerator = memo(function PromptGenerator({
 }: PromptGeneratorProps) {
   const { data: session } = useSession();
 
+  // LocalStorage key
+  const STORAGE_KEY = "promptGenerator";
+
+  // Load initial state from localStorage
+  const loadFromStorage = () => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          return JSON.parse(saved);
+        }
+      } catch (error) {
+        console.error("Error loading from localStorage:", error);
+      }
+    }
+    return {
+      requirements: "",
+      generatedPrompt: "",
+      promptName: "",
+    };
+  };
+
+  const initialState = loadFromStorage();
+
   // Initialize state
-  const [requirements, setRequirements] = useState("");
-  const [generatedPrompt, setGeneratedPrompt] = useState("");
-  const [promptName, setPromptName] = useState("");
+  const [requirements, setRequirements] = useState(initialState.requirements);
+  const [generatedPrompt, setGeneratedPrompt] = useState(
+    initialState.generatedPrompt
+  );
+  const [promptName, setPromptName] = useState(initialState.promptName);
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -31,6 +60,33 @@ const PromptGenerator = memo(function PromptGenerator({
   const [activateAfterSave, setActivateAfterSave] = useState(false);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState("");
+
+  // Save to localStorage whenever state changes
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const dataToSave = {
+          requirements,
+          generatedPrompt,
+          promptName,
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
+      } catch (error) {
+        console.error("Error saving to localStorage:", error);
+      }
+    }
+  }, [requirements, generatedPrompt, promptName]);
+
+  // Clear localStorage function
+  const clearStorage = () => {
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.removeItem(STORAGE_KEY);
+      } catch (error) {
+        console.error("Error clearing localStorage:", error);
+      }
+    }
+  };
 
   const handleGenerate = async () => {
     if (!requirements.trim()) {
@@ -92,6 +148,7 @@ const PromptGenerator = memo(function PromptGenerator({
         // Reset form
         setRequirements("");
         setGeneratedPrompt("");
+        clearStorage();
       } else {
         setError("Failed to save prompt. Please try again.");
       }
@@ -144,6 +201,7 @@ const PromptGenerator = memo(function PromptGenerator({
         // Reset form
         setRequirements("");
         setGeneratedPrompt("");
+        clearStorage();
       } else {
         setError(
           "Prompt saved but failed to activate. You can activate it later from the System Prompts page."
@@ -198,7 +256,7 @@ const PromptGenerator = memo(function PromptGenerator({
             >
               Your Requirements *
             </label>
-            <textarea
+            <Textarea
               id="requirements"
               value={requirements}
               onChange={(e) => setRequirements(e.target.value)}
@@ -209,7 +267,7 @@ const PromptGenerator = memo(function PromptGenerator({
           </div>
 
           <div className="flex justify-end">
-            <button
+            <Button
               onClick={handleGenerate}
               disabled={isGenerating || !requirements.trim()}
               className="btn-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -225,7 +283,7 @@ const PromptGenerator = memo(function PromptGenerator({
                   Generate Prompt
                 </>
               )}
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -260,7 +318,7 @@ const PromptGenerator = memo(function PromptGenerator({
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3">
-            <button
+            <Button
               onClick={handleRegenerate}
               disabled={isGenerating}
               className="btn-secondary flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -276,15 +334,15 @@ const PromptGenerator = memo(function PromptGenerator({
                   Regenerate
                 </>
               )}
-            </button>
+            </Button>
 
-            <button
+            <Button
               onClick={handleSaveAndActivate}
               className="btn-primary flex items-center justify-center gap-2"
             >
               <Save className="w-4 h-4" />
               Save Prompt
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -312,7 +370,7 @@ const PromptGenerator = memo(function PromptGenerator({
                 >
                   Prompt Name *
                 </label>
-                <input
+                <Input
                   id="promptName"
                   type="text"
                   value={promptName}
@@ -324,7 +382,7 @@ const PromptGenerator = memo(function PromptGenerator({
               </div>
 
               <div className="flex items-center">
-                <input
+                <Input
                   id="activateCheckbox"
                   type="checkbox"
                   checked={activateAfterSave}
@@ -341,15 +399,15 @@ const PromptGenerator = memo(function PromptGenerator({
               </div>
 
               <div className="flex gap-3">
-                <button
+                <Button
                   onClick={() => setShowSaveModal(false)}
                   className="flex-1 px-4 py-2 bg-gray-100 dark:bg-zinc-800 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-zinc-700 transition-colors"
                   disabled={isSaving || isActivating}
                 >
                   Cancel
-                </button>
+                </Button>
 
-                <button
+                <Button
                   onClick={activateAfterSave ? handleActivate : handleSave}
                   disabled={isSaving || isActivating || !promptName.trim()}
                   className="flex-1 btn-primary flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -364,7 +422,7 @@ const PromptGenerator = memo(function PromptGenerator({
                   ) : (
                     <>{activateAfterSave ? "Save & Activate" : "Save"}</>
                   )}
-                </button>
+                </Button>
               </div>
             </div>
           </div>

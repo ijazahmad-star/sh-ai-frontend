@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/database/db";
+import { users, kbAccess } from "@/database/schema";
+import { desc, eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 
 // GET all users (admin only)
@@ -13,23 +15,22 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const users = await prisma.user.findMany({
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        createdAt: true,
-        kb_access: {
-          select: {
-            hasAccessToDefaultKB: true,
-          },
+    const allUsers = await db
+      .select({
+        id: users.id,
+        email: users.email,
+        name: users.name,
+        role: users.role,
+        createdAt: users.createdAt,
+        kbAccess: {
+          hasAccessToDefaultKB: kbAccess.hasAccessToDefaultKB,
         },
-      },
-      orderBy: { createdAt: "desc" },
-    });
+      })
+      .from(users)
+      .leftJoin(kbAccess, eq(users.id, kbAccess.userId))
+      .orderBy(desc(users.createdAt));
 
-    return NextResponse.json({ users });
+    return NextResponse.json({ users: allUsers });
   } catch (error) {
     console.error("Database error:", error);
     return NextResponse.json({ error: "Database error" }, { status: 500 });
@@ -50,64 +51,65 @@ export async function POST(req: NextRequest) {
     if (!email || !password || !name) {
       return NextResponse.json(
         { error: "Email, password, and name are required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     if (password.length < 8) {
       return NextResponse.json(
         { error: "Password must be at least 8 characters" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
-    const existingUser = await prisma.user.findUnique({
-      where: { email },
-    });
+    const existingUser = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, email))
+      .limit(1);
 
-    if (existingUser) {
+    if (existingUser.length) {
       return NextResponse.json(
         { error: "User already exists" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const user = await prisma.user.create({
-      data: {
+    // Create user and KB access in transaction
+    const [newUser] = await db
+      .insert(users)
+      .values({
         email,
         password: hashedPassword,
         name,
         role: "user",
-        kb_access: {
-          create: {
-            hasAccessToDefaultKB: false,
-          },
-        },
-      },
-      include: {
-        kb_access: true,
-      },
+      })
+      .returning();
+
+    // Create KB access for the new user
+    await db.insert(kbAccess).values({
+      userId: newUser.id,
+      hasAccessToDefaultKB: false,
     });
 
     return NextResponse.json(
       {
         user: {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
+          id: newUser.id,
+          email: newUser.email,
+          name: newUser.name,
+          role: newUser.role,
         },
       },
-      { status: 201 }
+      { status: 201 },
     );
   } catch (error) {
     console.error("Signup error:", error);
     return NextResponse.json(
       { error: "Something went wrong" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
-

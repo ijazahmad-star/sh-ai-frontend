@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/database/db";
+import { users } from "@/database/schema";
+import { eq } from "drizzle-orm";
 
 // DELETE a user (admin only)
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const session = await getServerSession(authOptions);
 
@@ -18,14 +20,17 @@ export async function DELETE(
     const { id } = await params;
 
     // Just delete the user - cascade should handle the rest
-    const deletedUser = await prisma.user.delete({
-      where: { id },
-    });
+    const deletedUser = await db
+      .delete(users)
+      .where(eq(users.id, id))
+      .returning();
 
-    return NextResponse.json({ deletedUser });
-    
+    return NextResponse.json({ deletedUser: deletedUser[0] });
   } catch (error) {
     console.error("Database error:", error);
-    return NextResponse.json({ error: "Failed to delete user" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to delete user" },
+      { status: 500 },
+    );
   }
 }

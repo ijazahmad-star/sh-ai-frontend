@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/database/db";
+import { users, feedbacks, messages, conversations } from "@/database/schema";
+import { eq, and } from "drizzle-orm";
 
 // POST create feedback for a message
 export async function POST(
   req: NextRequest,
-  { params }: { params: Promise<{ messageId: string }> }
+  { params }: { params: Promise<{ messageId: string }> },
 ) {
   const session = await getServerSession(authOptions);
 
@@ -15,11 +17,13 @@ export async function POST(
   }
 
   try {
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-    });
+    const user = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, session.user.email))
+      .limit(1);
 
-    if (!user) {
+    if (!user.length) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
@@ -28,48 +32,53 @@ export async function POST(
       await req.json();
 
     // Check if feedback already exists for this message
-    const existingFeedback = await prisma.feedback.findFirst({
-      where: {
-        user_id: user.id,
-        conv_msg_id: messageId,
-      },
-    });
+    const existingFeedback = await db
+      .select()
+      .from(feedbacks)
+      .where(
+        and(
+          eq(feedbacks.userId, user[0].id),
+          eq(feedbacks.convMsgId, messageId),
+        ),
+      )
+      .limit(1);
 
-    if (existingFeedback) {
+    if (existingFeedback.length) {
       return NextResponse.json(
         { error: "Feedback already submitted for this message" },
-        { status: 409 }
+        { status: 409 },
       );
     }
 
     // Check if messageId is a valid UUID format
     const isUUID =
       /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-        messageId
+        messageId,
       );
 
     let conversationId: string;
 
     if (isUUID) {
       // Find the conversation that contains this message (traditional UUID message ID)
-      const message = await prisma.message.findUnique({
-        where: { id: messageId },
-        include: { conversation: true },
-      });
+      const message = await db
+        .select()
+        .from(messages)
+        .where(eq(messages.id, messageId))
+        .limit(1);
 
-      if (!message) {
+      if (!message.length) {
         return NextResponse.json(
           { error: "Message not found" },
-          { status: 404 }
+          { status: 404 },
         );
       }
 
-      // Verify user owns this conversation
-      if (message.conversation.user_id !== user.id) {
+      // Verify user owns this message
+      if (message[0].userId !== user[0].id) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
       }
 
-      conversationId = message.conversation_id;
+      conversationId = message[0].conversationId;
     } else {
       // For non-UUID messageId (like LangChain run IDs), we need conversation_id from request body
       if (!conversation_id) {
@@ -78,58 +87,58 @@ export async function POST(
             error:
               "conversation_id is required when using non-UUID message identifiers",
           },
-          { status: 400 }
+          { status: 400 },
         );
       }
       conversationId = conversation_id;
 
       // Verify user owns this conversation
-      const conversation = await prisma.conversation.findUnique({
-        where: { id: conversationId },
-      });
+      const conversation = await db
+        .select()
+        .from(conversations)
+        .where(eq(conversations.id, conversationId))
+        .limit(1);
 
-      if (!conversation) {
+      if (!conversation.length) {
         return NextResponse.json(
           { error: "Conversation not found" },
-          { status: 404 }
+          { status: 404 },
         );
       }
 
-      if (conversation.user_id !== user.id) {
+      if (conversation[0].userId !== user[0].id) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
       }
     }
 
     // Create the feedback
-    const feedback = await prisma.feedback.create({
-      data: {
-        user_id: user.id,
-        conversation_id: conversationId,
-        conv_msg_id: messageId,
-        ai_response: ai_response || "",
-        user_query: user_query || "",
+    const feedback = await db
+      .insert(feedbacks)
+      .values({
+        userId: user[0].id,
+        conversationId: conversationId,
+        convMsgId: messageId,
+        aiResponse: ai_response || "",
+        userQuery: user_query || "",
         thumb: thumb || "up",
         comment: comment || null,
-      },
-    });
+      })
+      .returning();
 
-    return NextResponse.json(feedback);
+    return NextResponse.json(feedback[0]);
   } catch (error) {
     console.error("Error creating feedback:", error);
     return NextResponse.json(
-      {
-        error: "Internal Server Error",
-        details: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 }
+      { error: "Internal Server Error" },
+      { status: 500 },
     );
   }
 }
 
-// GET check if feedback exists for a message
+// GET check if user has submitted feedback for a specific message
 export async function GET(
   req: NextRequest,
-  { params }: { params: Promise<{ messageId: string }> }
+  { params }: { params: Promise<{ messageId: string }> },
 ) {
   const session = await getServerSession(authOptions);
 
@@ -138,42 +147,43 @@ export async function GET(
   }
 
   try {
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-    });
+    const user = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, session.user.email))
+      .limit(1);
 
-    if (!user) {
+    if (!user.length) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     const { messageId } = await params;
 
-    // Check if feedback exists for this message
-    const feedback = await prisma.feedback.findFirst({
-      where: {
-        user_id: user.id,
-        conv_msg_id: messageId,
-      },
-      select: {
-        id: true,
-        thumb: true,
-        comment: true,
-        createdAt: true,
-      },
-    });
+    // Check if feedback exists for this message by this user
+    const existingFeedback = await db
+      .select()
+      .from(feedbacks)
+      .where(
+        and(
+          eq(feedbacks.userId, user[0].id),
+          eq(feedbacks.convMsgId, messageId),
+        ),
+      )
+      .limit(1);
 
-    return NextResponse.json({
-      hasFeedback: !!feedback,
-      feedback: feedback,
-    });
+    if (existingFeedback.length) {
+      return NextResponse.json({
+        hasFeedback: true,
+        feedback: existingFeedback[0],
+      });
+    }
+
+    return NextResponse.json({ hasFeedback: false });
   } catch (error) {
-    console.error("Error checking feedback:", error);
+    console.error("Error fetching feedback:", error);
     return NextResponse.json(
-      {
-        error: "Internal Server Error",
-        details: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 }
+      { error: "Internal Server Error" },
+      { status: 500 },
     );
   }
 }

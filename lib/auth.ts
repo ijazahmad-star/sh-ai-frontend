@@ -1,6 +1,8 @@
 import CredentialsProvider from "next-auth/providers/credentials";
 import type { NextAuthOptions } from "next-auth";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/database/db";
+import { users } from "@/database/schema";
+import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 
 export const authOptions: NextAuthOptions = {
@@ -16,17 +18,19 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Invalid credentials");
         }
 
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
-        });
+        const user = await db
+          .select()
+          .from(users)
+          .where(eq(users.email, credentials.email))
+          .limit(1);
 
-        if (!user || !user.password) {
+        if (!user.length || !user[0].password) {
           throw new Error("Invalid credentials");
         }
 
         const isPasswordValid = await bcrypt.compare(
           credentials.password,
-          user.password
+          user[0].password,
         );
 
         if (!isPasswordValid) {
@@ -34,11 +38,11 @@ export const authOptions: NextAuthOptions = {
         }
 
         return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          image: user.image,
-          role: user.role,
+          id: user[0].id,
+          email: user[0].email,
+          name: user[0].name,
+          image: user[0].image,
+          role: user[0].role,
         };
       },
     }),
@@ -47,15 +51,17 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (session?.user?.email) {
         try {
-          const dbUser = await prisma.user.findUnique({
-            where: { email: session.user.email },
-          });
+          const dbUser = await db
+            .select()
+            .from(users)
+            .where(eq(users.email, session.user.email))
+            .limit(1);
 
-          if (dbUser) {
-            session.user.id = dbUser.id;
-            session.user.name = dbUser.name;
-            session.user.image = dbUser.image;
-            session.user.role = dbUser.role as "admin" | "user";
+          if (dbUser.length) {
+            session.user.id = dbUser[0].id;
+            session.user.name = dbUser[0].name;
+            session.user.image = dbUser[0].image;
+            session.user.role = dbUser[0].role as "admin" | "user";
           } else {
             session.user.id = token.sub!;
             session.user.role = "user";

@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/database/db";
+import { kbAccess } from "@/database/schema";
+import { eq } from "drizzle-orm";
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: Promise<{ userId: string }> }
+  { params }: { params: Promise<{ userId: string }> },
 ) {
   const session = await getServerSession(authOptions);
 
@@ -21,15 +23,19 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
-    const kbAccess = await prisma.kBAccess.findUnique({
-      where: { user_id: userId },
-    });
+    const userKbAccess = await db
+      .select()
+      .from(kbAccess)
+      .where(eq(kbAccess.userId, userId))
+      .limit(1);
 
     // Check if user has personal KB
     const hasPersonalKB = await checkUserPersonalKB(userId);
 
     return NextResponse.json({
-      hasAccessToDefaultKB: kbAccess?.hasAccessToDefaultKB || false,
+      hasAccessToDefaultKB: userKbAccess.length
+        ? userKbAccess[0].hasAccessToDefaultKB
+        : false,
       has_personal_kb: hasPersonalKB,
     });
   } catch (error) {

@@ -1,12 +1,16 @@
 import type { Prompt } from "@/types/prompt";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
 
-export const fetchAllSystemPrompts = async (userId: string): Promise<{
+export const fetchAllSystemPrompts = async (
+  userId: string,
+): Promise<{
   prompts: Prompt[];
 } | null> => {
   try {
-    const res = await fetch(`${API_BASE}/get_prompts/${encodeURIComponent(userId)}`);
+    const res = await fetch(
+      `${API_BASE}/get_prompts/${encodeURIComponent(userId)}`,
+    );
     if (!res.ok) {
       console.error("fetchAllSystemPrompts: non-ok response", res.status);
       return { prompts: [] };
@@ -21,13 +25,16 @@ export const fetchAllSystemPrompts = async (userId: string): Promise<{
   }
 };
 
-export const deleteSystemPrompt = async (name: string, userId: string): Promise<boolean> => {
+export const deleteSystemPrompt = async (
+  name: string,
+  userId: string,
+): Promise<boolean> => {
   try {
     const res = await fetch(
       `${API_BASE}/delete_prompt/${encodeURIComponent(userId)}/${encodeURIComponent(name)}`,
       {
         method: "DELETE",
-      }
+      },
     );
     return res.ok;
   } catch (e) {
@@ -36,13 +43,16 @@ export const deleteSystemPrompt = async (name: string, userId: string): Promise<
   }
 };
 
-export const setActiveSystemPrompt = async (name: string, userId: string): Promise<boolean> => {
+export const setActiveSystemPrompt = async (
+  name: string,
+  userId: string,
+): Promise<boolean> => {
   try {
     const res = await fetch(
       `${API_BASE}/set_active_prompt/${encodeURIComponent(userId)}/${encodeURIComponent(name)}`,
       {
         method: "POST",
-      }
+      },
     );
     return res.ok;
   } catch (e) {
@@ -54,7 +64,7 @@ export const setActiveSystemPrompt = async (name: string, userId: string): Promi
 export const addSystemPrompt = async (
   prompt_name: string,
   prompt_text: string,
-  userId: string
+  userId: string,
 ): Promise<Prompt | null> => {
   try {
     const res = await fetch(`${API_BASE}/add_prompt`, {
@@ -83,16 +93,16 @@ export const addSystemPrompt = async (
 export const updateSystemPrompt = async (
   oldName: string,
   newPrompt: string,
-  userId: string
+  userId: string,
 ): Promise<boolean> => {
   try {
     const res = await fetch(`${API_BASE}/edit_prompt`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ 
-        old_name: oldName, 
+      body: JSON.stringify({
+        old_name: oldName,
         new_prompt: newPrompt,
-        user_id: userId
+        user_id: userId,
       }),
     });
     return res.ok;
@@ -102,9 +112,13 @@ export const updateSystemPrompt = async (
   }
 };
 
-export const getActivePrompt = async (userId: string): Promise<Prompt | null> => {
+export const getActivePrompt = async (
+  userId: string,
+): Promise<Prompt | null> => {
   try {
-    const res = await fetch(`${API_BASE}/get_active_prompt/${encodeURIComponent(userId)}`);
+    const res = await fetch(
+      `${API_BASE}/get_active_prompt/${encodeURIComponent(userId)}`,
+    );
     if (!res.ok) {
       console.error("getActivePrompt: non-ok response", res.status);
       return null;
@@ -121,8 +135,13 @@ export const getAiResponse = async (
   query: string,
   userId: string,
   kbType: "default" | "custom" = "default",
-  conversationId: string
-): Promise<{ response: string; sources: any[]; message_id?: string } | null> => {
+  conversationId: string,
+  model: string = "gpt-4o-mini",
+): Promise<{
+  response: string;
+  sources: any[];
+  message_id?: string;
+} | null> => {
   try {
     const res = await fetch(`${API_BASE}/query`, {
       method: "POST",
@@ -131,7 +150,8 @@ export const getAiResponse = async (
         query,
         user_id: userId,
         kb_type: kbType,
-        conversation_id: conversationId
+        conversation_id: conversationId,
+        model: model,
       }),
     });
 
@@ -143,18 +163,22 @@ export const getAiResponse = async (
     return {
       response: body.response || "",
       sources: body.sources || [],
-      message_id: body.message_id
+      message_id: body.message_id,
     };
   } catch (e) {
     console.error("getAiResponse:", e);
     return null;
   }
-}
+};
 
 export const generatePrompt = async (
   requirements: string,
-  userId: string
-): Promise<{ status: string; generated_prompt: string; user_id: string } | null> => {
+  userId: string,
+): Promise<{
+  status: string;
+  generated_prompt: string;
+  user_id: string;
+} | null> => {
   try {
     const res = await fetch(`${API_BASE}/generate_prompt`, {
       method: "POST",

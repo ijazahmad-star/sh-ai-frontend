@@ -9,6 +9,7 @@ import Sidebar from "@/components/chat/Sidebar";
 import ConfirmModal from "../ui/ConfirmModal";
 import MessageBubble from "@/components/chat/MessageBubble";
 import ChatInput from "@/components/chat/ChatInput";
+import { greetingPatterns } from "@/lib/constants/models";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
 
@@ -25,6 +26,7 @@ export default function ChatInterface() {
   const isGeneratingRef = useRef(false);
   const [loadingCov, setLoadingCov] = useState(false);
   const [kbType, setKbType] = useState<"default" | "custom">("default");
+  const [selectedModel, setSelectedModel] = useState("gpt-4o-mini");
   const [hasPersonalKB, setHasPersonalKB] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [hasAccessToDefaultKB, setHasAccessToDefaultKB] = useState(false);
@@ -42,7 +44,7 @@ export default function ChatInterface() {
 
     try {
       const res = await fetch(
-        `${API_BASE}/check_user_has_access_to_default_kb/${session.user.id}`
+        `${API_BASE}/check_user_has_access_to_default_kb/${session.user.id}`,
       );
       if (res.ok) {
         const data = await res.json();
@@ -83,47 +85,51 @@ export default function ChatInterface() {
     }
   }, []);
 
-  const loadConversation = useCallback(async (conversationId: string) => {
-    setLoadingCov(true);
-  
-    try {
-      const res = await fetch(`/api/chat/conversations/${conversationId}`);
-      if (!res.ok) throw new Error("Failed to fetch conversation");
-  
-      const conversation = await res.json();
-      const messages: Message[] = conversation.messages || [];
-  
-      const processedMessages = messages.map((msg, idx) => {
-        let userQuery = "";
-  
-        if (msg.role === "assistant") {
-          const lastUserMessage = messages
-            .slice(0, idx)
-            .reverse()
-            .find((m) => m.role === "user");
-  
-          if (lastUserMessage) userQuery = lastUserMessage.content;
-        }
-  
-        return {
-          ...msg,
-          conversation_id: conversationId,
-          user_id: session?.user?.id,
-          user_query: userQuery,
-          sources: msg.sources || [],
-        };
-      });
-  
-      setMessages(processedMessages);
-      setCurrentConversationId(conversationId);
-    } catch (error) {
-      console.error("Failed to load conversation:", error);
-    } finally {
-      setLoadingCov(false);
-    }
-  }, [session?.user?.id]);
+  const loadConversation = useCallback(
+    async (conversationId: string) => {
+      setLoadingCov(true);
+
+      try {
+        const res = await fetch(`/api/chat/conversations/${conversationId}`);
+        if (!res.ok) throw new Error("Failed to fetch conversation");
+
+        const conversation = await res.json();
+        const messages: Message[] = conversation.messages || [];
+
+        const processedMessages = messages.map((msg, idx) => {
+          let userQuery = "";
+
+          if (msg.role === "assistant") {
+            const lastUserMessage = messages
+              .slice(0, idx)
+              .reverse()
+              .find((m) => m.role === "user");
+
+            if (lastUserMessage) userQuery = lastUserMessage.content;
+          }
+
+          return {
+            ...msg,
+            conversation_id: conversationId,
+            user_id: session?.user?.id,
+            user_query: userQuery,
+            sources: msg.sources || [],
+          };
+        });
+
+        setMessages(processedMessages);
+        setCurrentConversationId(conversationId);
+      } catch (error) {
+        console.error("Failed to load conversation:", error);
+      } finally {
+        setLoadingCov(false);
+      }
+    },
+    [session?.user?.id],
+  );
 
   const createNewConversation = useCallback(async () => {
+    setLoadingCov(true);
     try {
       const res = await fetch("/api/chat/conversations", {
         method: "POST",
@@ -140,6 +146,8 @@ export default function ChatInterface() {
       }
     } catch (e) {
       console.error("Failed to create conversation:", e);
+    } finally {
+      setLoadingCov(false);
     }
     return null;
   }, [loadConversations]);
@@ -174,12 +182,13 @@ export default function ChatInterface() {
         userMessage.content,
         session.user.id,
         kbType,
-        conversationId
+        conversationId,
+        selectedModel,
       );
 
       // AI message with sources
       const aiMessage: Message = {
-        id: response?.message_id || (String(Date.now()) + "-a"), // Use real message ID if available
+        id: response?.message_id || String(Date.now()) + "-a", // Use real message ID if available
         role: "assistant",
         content: response?.response ?? "(no response)",
         sources: response?.sources?.map((s) => s.source) || [],
@@ -272,24 +281,35 @@ export default function ChatInterface() {
         console.error("Failed to rename conversation:", e);
       }
     },
-    [loadConversations]
+    [loadConversations],
   );
 
   const updateConversationTitle = useCallback(
     async (conversationId: string, firstMessage: string) => {
       try {
-        // Generate a smart title from first message (first 50 chars or first sentence)
-        let title = firstMessage.trim();
+        let title = firstMessage.trim().toLowerCase();
 
-        // Take first sentence if it ends with punctuation
-        const firstSentence = title.match(/^[^.!?]+[.!?]/);
-        if (firstSentence) {
-          title = firstSentence[0].trim();
-        }
+        const isGreeting = greetingPatterns.some((pattern) =>
+          pattern.test(title),
+        );
 
-        // Limit to 50 characters
-        if (title.length > 50) {
-          title = title.substring(0, 47) + "...";
+        if (isGreeting) {
+          // Set a greeting-specific title
+          title = "Greeting Message";
+        } else {
+          // Use original logic for non-greeting messages
+          title = firstMessage.trim();
+
+          // Take first sentence if it ends with punctuation
+          const firstSentence = title.match(/^[^.!?]+[.!?]/);
+          if (firstSentence) {
+            title = firstSentence[0].trim();
+          }
+
+          // Limit to 50 characters
+          if (title.length > 50) {
+            title = title.substring(0, 47) + "...";
+          }
         }
 
         // Update the conversation title
@@ -307,7 +327,7 @@ export default function ChatInterface() {
         console.error("Failed to update conversation title:", e);
       }
     },
-    [loadConversations]
+    [loadConversations],
   );
 
   // useEffect hooks
@@ -428,9 +448,7 @@ export default function ChatInterface() {
               <div className="flex-1 flex items-center justify-center">
                 <div className="flex flex-col items-center justify-center space-y-4">
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-700 dark:border-gray-300"></div>
-                  <div className="text-gray-700 dark:text-gray-300 text-lg font-semibold">
-                    Loading conversations...
-                  </div>
+                  <div className="text-gray-700 dark:text-gray-300 text-lg font-semibold"></div>
                 </div>
               </div>
             )}
@@ -482,7 +500,7 @@ export default function ChatInterface() {
                 ))}
                 {loading && (
                   <div className="flex justify-start">
-                    <div className="inline-block max-w-full sm:max-w-[60%] px-4 py-2 rounded-lg bg-gray-100 dark:bg-zinc-700 animate-pulse">
+                    <div className="text-black inline-block max-w-full sm:max-w-[60%] px-4 py-2 rounded-lg bg-gray-100 dark:bg-zinc-700 animate-pulse">
                       AI is typing...
                     </div>
                   </div>
@@ -501,6 +519,8 @@ export default function ChatInterface() {
               hasAccessToDefaultKB={hasAccessToDefaultKB}
               loading={loading}
               disabled={noKbAccess}
+              selectedModel={selectedModel}
+              setSelectedModel={setSelectedModel}
             />
           </div>
         </div>

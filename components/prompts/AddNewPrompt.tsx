@@ -3,6 +3,9 @@
 import { useEffect, useState } from "react";
 import { addSystemPrompt } from "@/lib/prompts";
 import type { Prompt } from "@/types/prompt";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
+import { Textarea } from "../ui/textarea";
 
 export default function AddNewPrompt({
   showComponent,
@@ -80,7 +83,7 @@ export default function AddNewPrompt({
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Prompt Name
                 </label>
-                <input
+                <Input
                   className="w-full p-2.5 border border-gray-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-red-600 outline-none transition-all"
                   placeholder="e.g. Sales Assistant"
                   value={name}
@@ -93,7 +96,7 @@ export default function AddNewPrompt({
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Prompt Instruction
                 </label>
-                <textarea
+                <Textarea
                   className="w-full h-48 p-2.5 border border-gray-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-red-600 outline-none transition-all resize-none"
                   placeholder="Enter the system instruction here..."
                   value={promptText}
@@ -104,7 +107,7 @@ export default function AddNewPrompt({
             </div>
 
             <div className="flex justify-end gap-3 mt-8">
-              <button
+              <Button
                 className={`px-4 py-2 rounded-lg font-semibold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 transition-colors ${
                   loading ? "opacity-50 cursor-not-allowed" : ""
                 }`}
@@ -112,9 +115,9 @@ export default function AddNewPrompt({
                 disabled={loading}
               >
                 Cancel
-              </button>
-              <button
-                className={`btn-primary px-6 py-2 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700 transition-colors ${
+              </Button>
+              <Button
+                className={`btn-primary px-6 py-2 rounded-lg font-semibold text-white  hover:bg-primary-600 transition-colors ${
                   loading ? "opacity-50 cursor-not-allowed" : ""
                 }`}
                 onClick={handleSave}
@@ -147,7 +150,7 @@ export default function AddNewPrompt({
                 ) : (
                   "Save Prompt"
                 )}
-              </button>
+              </Button>
             </div>
           </div>
         </div>

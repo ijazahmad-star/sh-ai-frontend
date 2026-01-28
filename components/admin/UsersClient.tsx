@@ -3,6 +3,29 @@
 import { useState, useTransition } from "react";
 import ConfirmModal from "../ui/ConfirmModal";
 import { useRouter } from "next/navigation";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../ui/dropdown-menu";
+import { Button } from "../ui/button";
+import {
+  MoreHorizontal,
+  Shield,
+  ShieldX,
+  Trash2,
+  Eye,
+  EyeOff,
+} from "lucide-react";
 
 interface User {
   id: string;
@@ -29,9 +52,10 @@ export default function UsersClient({
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [creating, setCreating] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [pendingDeleteUserId, setPendingDeleteUserId] = useState<string | null>(
-    null
+    null,
   );
   const [isDeletingUser, setIsDeletingUser] = useState(false);
 
@@ -82,7 +106,7 @@ export default function UsersClient({
 
   const handleToggleDefaultKB = async (
     userId: string,
-    currentValue: boolean
+    currentValue: boolean,
   ) => {
     try {
       const res = await fetch(`/api/admin/users/${userId}/kb-access`, {
@@ -92,9 +116,26 @@ export default function UsersClient({
       });
 
       if (res.ok) {
-        router.refresh();
+        // Update local state immediately
+        setUsers((prev) =>
+          prev.map((user) =>
+            user.id === userId
+              ? {
+                  ...user,
+                  kb_access: {
+                    ...user.kb_access,
+                    hasAccessToDefaultKB: !currentValue,
+                  },
+                }
+              : user,
+          ),
+        );
+
         setSuccess("KB access updated");
         setTimeout(() => setSuccess(""), 3000);
+
+        // Optional: Keep router.refresh() for server state sync
+        router.refresh();
       } else {
         setError("Failed to update KB access");
       }
@@ -126,7 +167,7 @@ export default function UsersClient({
 
       setSuccess("User deleted successfully");
       startTransition(() =>
-        setUsers((prev) => prev.filter((u) => u.id !== userId))
+        setUsers((prev) => prev.filter((u) => u.id !== userId)),
       );
       router.refresh();
       setTimeout(() => setSuccess(""), 3000);
@@ -159,51 +200,41 @@ export default function UsersClient({
         <h2 className="text-lg font-semibold text-black dark:text-white">
           All Users ({users.length})
         </h2>
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="btn-primary w-full sm:w-auto py-2.5 px-4 text-sm sm:text-base"
-        >
+        <Button onClick={() => setShowCreateModal(true)} className="sm:w-auto">
           + Create User
-        </button>
+        </Button>
       </div>
 
-      <div className="hidden md:block overflow-x-auto">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-gray-200 dark:border-zinc-700">
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">
+      <div className="hidden md:block">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="text-black dark:text-white">
                 Email
-              </th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">
-                Name
-              </th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">
-                Role
-              </th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">
+              </TableHead>
+              <TableHead className="text-black dark:text-white font-bold">Name</TableHead>
+              <TableHead className="text-black dark:text-white font-bold">Role</TableHead>
+              <TableHead className="text-black dark:text-white font-bold">
                 KB Access
-              </th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">
+              </TableHead>
+              <TableHead className="text-black dark:text-white font-bold">
                 Created
-              </th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">
+              </TableHead>
+              <TableHead className="text-black dark:text-white w-[70px] font-bold">
                 Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody>
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {users.map((user) => (
-              <tr
-                key={user.id}
-                className="border-b border-gray-100 dark:border-zinc-800 hover:bg-gray-50 dark:hover:bg-zinc-800"
-              >
-                <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
+              <TableRow key={user.id}>
+                <TableCell className="text-black dark:text-white">
                   {user.email}
-                </td>
-                <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
+                </TableCell>
+                <TableCell className="text-black dark:text-white">
                   {user.name || "-"}
-                </td>
-                <td className="px-4 py-3 text-sm">
+                </TableCell>
+                <TableCell>
                   <span
                     className={`px-2 py-1 rounded-full text-xs font-semibold ${
                       user.role === "admin"
@@ -213,10 +244,10 @@ export default function UsersClient({
                   >
                     {user.role}
                   </span>
-                </td>
-                <td className="px-4 py-3 text-sm">
+                </TableCell>
+                <TableCell>
                   <span
-                    className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                    className={`px-2 py-1 rounded-full text-xs ${
                       user.kb_access?.hasAccessToDefaultKB
                         ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-200"
                         : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"
@@ -224,43 +255,55 @@ export default function UsersClient({
                   >
                     {user.kb_access?.hasAccessToDefaultKB ? "Yes" : "No"}
                   </span>
-                </td>
-                <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
+                </TableCell>
+                <TableCell className="text-muted-foreground">
                   {new Date(user.createdAt).toLocaleDateString()}
-                </td>
-                <td className="px-4 py-3 text-sm space-x-2">
+                </TableCell>
+                <TableCell>
                   {user.role !== "admin" && (
-                    <>
-                      <button
-                        onClick={() =>
-                          handleToggleDefaultKB(
-                            user.id,
-                            user.kb_access?.hasAccessToDefaultKB || false
-                          )
-                        }
-                        className={`px-3 py-1 rounded text-xs font-semibold ${
-                          user.kb_access?.hasAccessToDefaultKB
-                            ? "bg-red-100 text-red-800 hover:bg-red-200 dark:bg-red-900/20 dark:text-red-200"
-                            : "bg-green-100 text-green-800 hover:bg-green-200 dark:bg-green-900/20 dark:text-green-200"
-                        }`}
-                      >
-                        {user.kb_access?.hasAccessToDefaultKB
-                          ? "Revoke"
-                          : "Grant"}
-                      </button>
-                      <button
-                        onClick={() => handleDeleteUser(user.id)}
-                        className="px-3 py-1 rounded text-xs font-semibold bg-primary-500 text-white hover:bg-primary-700"
-                      >
-                        Delete
-                      </button>
-                    </>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="h-8 w-8 p-0">
+                          <span className="sr-only">Open menu</span>
+                          <MoreHorizontal className="h-4 w-4 text-black dark:text-white" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onClick={() =>
+                            handleToggleDefaultKB(
+                              user.id,
+                              user.kb_access?.hasAccessToDefaultKB || false,
+                            )
+                          }
+                        >
+                          {user.kb_access?.hasAccessToDefaultKB ? (
+                            <>
+                              <ShieldX className="h-4 w-4" />
+                              Revoke KB Access
+                            </>
+                          ) : (
+                            <>
+                              <Shield className="h-4 w-4" />
+                              Grant KB Access
+                            </>
+                          )}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          variant="destructive"
+                          onClick={() => handleDeleteUser(user.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Delete User
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   )}
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
 
       <div className="md:hidden space-y-4">
@@ -335,29 +378,42 @@ export default function UsersClient({
                     Actions
                   </p>
                   <div className="flex flex-wrap gap-2">
-                    <button
+                    <Button
+                      variant="outline"
+                      size="sm"
                       onClick={() =>
                         handleToggleDefaultKB(
                           user.id,
-                          user.kb_access?.hasAccessToDefaultKB || false
+                          user.kb_access?.hasAccessToDefaultKB || false,
                         )
                       }
-                      className={`px-3 py-1.5 rounded text-xs font-semibold flex-1 ${
+                      className={`flex-1 text-xs ${
                         user.kb_access?.hasAccessToDefaultKB
-                          ? "bg-red-100 text-red-800 hover:bg-red-200 dark:bg-red-900/20 dark:text-red-200"
-                          : "bg-green-100 text-green-800 hover:bg-green-200 dark:bg-green-900/20 dark:text-green-200"
+                          ? "border-red-200 text-red-800 hover:bg-red-50 dark:border-red-900/20 dark:text-red-200 dark:hover:bg-red-900/10"
+                          : "border-green-200 text-green-800 hover:bg-green-50 dark:border-green-900/20 dark:text-green-200 dark:hover:bg-green-900/10"
                       }`}
                     >
-                      {user.kb_access?.hasAccessToDefaultKB
-                        ? "Revoke KB"
-                        : "Grant KB"}
-                    </button>
-                    <button
+                      {user.kb_access?.hasAccessToDefaultKB ? (
+                        <>
+                          <ShieldX className="h-3 w-3" />
+                          Revoke KB
+                        </>
+                      ) : (
+                        <>
+                          <Shield className="h-3 w-3" />
+                          Grant KB
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
                       onClick={() => handleDeleteUser(user.id)}
-                      className="px-3 py-1.5 rounded text-xs font-semibold bg-red-600 text-white hover:bg-red-700 flex-1"
+                      className="flex-1 text-xs bg-primary-500"
                     >
+                      <Trash2 className="h-3 w-3" />
                       Delete User
-                    </button>
+                    </Button>
                   </div>
                 </div>
               )}
@@ -373,13 +429,15 @@ export default function UsersClient({
               <h2 className="text-xl font-bold text-black dark:text-white">
                 Create New User
               </h2>
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => setShowCreateModal(false)}
-                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-2xl"
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 h-auto p-1"
                 aria-label="Close modal"
               >
                 ×
-              </button>
+              </Button>
             </div>
 
             <form onSubmit={handleCreateUser} className="space-y-4">
@@ -415,34 +473,41 @@ export default function UsersClient({
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Password
                 </label>
-                <input
-                  type="password"
-                  value={newUserPassword}
-                  onChange={(e) => setNewUserPassword(e.target.value)}
-                  className="w-full px-3 py-2.5 border border-gray-300 dark:border-zinc-700 rounded-md bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-red-600 text-sm sm:text-base"
-                  placeholder="Min 8 characters"
-                  required
-                  minLength={8}
-                />
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={newUserPassword}
+                    onChange={(e) => setNewUserPassword(e.target.value)}
+                    className="w-full px-3 py-2.5 pr-10 border border-gray-300 dark:border-zinc-700 rounded-md bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-red-600 text-sm sm:text-base"
+                    placeholder="Min 8 characters"
+                    required
+                    minLength={8}
+                  />
+                  <Button
+                    type="button"
+                    variant="eye-button"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </Button>
+                </div>
                 <p className="mt-1 text-xs text-gray-500">
                   Minimum 8 characters
                 </p>
               </div>
 
               <div className="flex flex-col sm:flex-row gap-3 pt-4">
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
                   onClick={() => setShowCreateModal(false)}
-                  className="btn-secondary py-2.5 px-4 text-sm sm:text-base flex-1"
+                  className="flex-1"
                 >
                   Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="btn-primary py-2.5 px-4 text-sm sm:text-base flex-1"
-                >
-                  Create User
-                </button>
+                </Button>
+                <Button type="submit" disabled={creating} className="flex-1">
+                  {creating ? "Creating..." : "Create User"}
+                </Button>
               </div>
             </form>
           </div>

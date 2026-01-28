@@ -2,7 +2,9 @@ import Navigation from "@/components/Navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/database/db";
+import { users, feedbacks } from "@/database/schema";
+import { eq } from "drizzle-orm";
 import FeedbackAnalyticsClient from "@/components/admin/FeedbackAnalyticsClient";
 
 export default async function FeedbackAnalyticsPage() {
@@ -12,22 +14,26 @@ export default async function FeedbackAnalyticsPage() {
   }
 
   // Get users who shared feedback
-  const users = await prisma.user.findMany({
-    where: {
-      feedbacks: {
-        some: {},
-      },
-    },
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      feedbacks: {
-        select: { id: true },
-      },
-    },
-    orderBy: { name: "asc" },
-  });
+  const allFeedbacks = await db.select().from(feedbacks);
+  const uniqueUserIds = [...new Set(allFeedbacks.map((f) => f.userId))];
+
+  const usersFormatted = await Promise.all(
+    uniqueUserIds.map(async (userId) => {
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+      const userFeedbacks = allFeedbacks.filter((f) => f.userId === userId);
+
+      return {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        feedbacks: userFeedbacks.map((f) => ({ id: f.id })),
+      };
+    }),
+  );
 
   return (
     <div className="min-h-screen bg-linear-to-b from-white to-zinc-50 dark:from-black dark:to-zinc-900">
@@ -48,7 +54,7 @@ export default async function FeedbackAnalyticsPage() {
         </header>
 
         <div className="bg-white dark:bg-zinc-900 shadow-lg rounded-xl p-4 sm:p-6 border border-gray-100 dark:border-zinc-800">
-          <FeedbackAnalyticsClient initialUsers={users} />
+          <FeedbackAnalyticsClient initialUsers={usersFormatted} />
         </div>
       </div>
     </div>

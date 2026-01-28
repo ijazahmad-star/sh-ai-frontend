@@ -3,79 +3,12 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useSession, signOut } from "next-auth/react";
-import lightLogo from "../public/SH-Logos.png";
 import darkLogo from "../public/SH-Logos-1.png";
 import { usePathname } from "next/navigation";
-
+import { Button } from "./ui/button";
 import { Menu, X } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
-
-function UserMenu({ user, onSignOut }: { user: any; onSignOut: () => void }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
-
-  return (
-    <div ref={ref} className="relative ml-2">
-      <button
-        onClick={() => setOpen((s) => !s)}
-        className="flex items-center gap-2 text-white hover:opacity-90 rounded px-1 py-1"
-        aria-haspopup="true"
-        aria-expanded={open}
-      >
-        {user.image ? (
-          <img
-            src={user.image}
-            alt={user.name || "User"}
-            className="w-7 h-7 lg:w-8 lg:h-8 rounded-full border border-white/20"
-          />
-        ) : (
-          <div className="w-7 h-7 lg:w-8 lg:h-8 rounded-full bg-primary-500 flex items-center justify-center">
-            <span className="text-xs font-semibold">
-              {user.name?.charAt(0) || "U"}
-            </span>
-          </div>
-        )}
-        {/* <div className="hidden lg:block text-left">
-          <p className="text-sm font-medium">{user.name}</p>
-          <p className="text-xs text-gray-300">({user.role})</p>
-        </div> */}
-      </button>
-
-      {open && (
-        <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-zinc-900 rounded shadow-lg py-2 z-50">
-          <div className="px-4 py-2">
-            <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-              {user.name}
-            </p>
-            <p className="text-xs text-gray-500 dark:text-gray-300">
-              {user.role}
-            </p>
-          </div>
-          <div className="border-t border-gray-100 dark:border-zinc-800" />
-          <button
-            onClick={() => {
-              setOpen(false);
-              onSignOut();
-            }}
-            className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-zinc-800"
-          >
-            Sign out
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
+import { useState } from "react";
+import UserMenu from "./UserMenu";
 
 export default function Navigation() {
   const { data: session } = useSession();
@@ -147,7 +80,7 @@ export default function Navigation() {
                       <span className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-primary-500 rounded-full"></span>
                     )}
                   </Link>
-                )
+                ),
             )}
           </nav>
         </div>
@@ -165,13 +98,14 @@ export default function Navigation() {
         </div>
 
         {/* Mobile Menu Button */}
-        <button
+        <Button
           onClick={() => handleMenu(!isMenuOpen)}
-          className="md:hidden text-white p-2 hover:bg-white/10 rounded-lg transition-colors"
+          className="md:hidden"
           aria-label="Toggle menu"
+          variant="open-menu"
         >
           {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
-        </button>
+        </Button>
 
         {isMenuOpen && (
           <div
@@ -226,7 +160,7 @@ export default function Navigation() {
                     >
                       {link.label}
                     </Link>
-                  )
+                  ),
               )}
             </nav>
 
@@ -253,7 +187,7 @@ export default function Navigation() {
                     <p className="text-gray-300 text-xs">{session.user.role}</p>
                   </div>
                 </div>
-                <button
+                <Button
                   onClick={() => {
                     closeMenu();
                     setShowSignOutModal(true);
@@ -274,7 +208,7 @@ export default function Navigation() {
                     />
                   </svg>
                   Sign Out
-                </button>
+                </Button>
               </div>
             )}
           </div>
@@ -295,19 +229,14 @@ export default function Navigation() {
                 Are you sure you want to sign out? You will need to sign in
                 again to access your account.
               </p>
-              <div className="mt-4 flex justify-end gap-3">
-                <button
+              <div className="mt-4 flex flex-col gap-y-4">
+                <Button onClick={doSignOut}>Sign out</Button>
+                <Button
                   onClick={() => setShowSignOutModal(false)}
-                  className="px-4 py-2 bg-gray-100 dark:bg-zinc-800 rounded-md text-sm"
+                  variant="secondary"
                 >
                   Cancel
-                </button>
-                <button
-                  onClick={doSignOut}
-                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md text-sm"
-                >
-                  Sign out
-                </button>
+                </Button>
               </div>
             </div>
           </div>

@@ -2,7 +2,9 @@
 
 import React, { useState, useCallback } from "react";
 import ConfirmModal from "../ui/ConfirmModal";
-
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
+import { Trash2 } from "lucide-react";
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
 
 interface Document {
@@ -19,7 +21,7 @@ export default function KnowledgeBaseClient({
   userId: string;
 }) {
   const [documents, setDocuments] = useState<Document[]>(
-    initialDocuments || []
+    initialDocuments || [],
   );
   const [isUploading, setIsUploading] = useState(false);
   const [uploadMessage, setUploadMessage] = useState<{
@@ -97,7 +99,7 @@ export default function KnowledgeBaseClient({
         setTimeout(() => setUploadMessage(null), 5000);
       }
     },
-    [userId, loadDocuments]
+    [userId, loadDocuments],
   );
 
   const handleDownload = useCallback(
@@ -105,7 +107,7 @@ export default function KnowledgeBaseClient({
       if (!userId) return;
       try {
         const res = await fetch(
-          `${API_BASE}/download_user_document/${docId}?user_id=${userId}`
+          `${API_BASE}/download_user_document/${docId}?user_id=${userId}`,
         );
         const data = await res.json();
         if (data.download_url) window.open(data.download_url, "_blank");
@@ -113,7 +115,7 @@ export default function KnowledgeBaseClient({
         // ignore
       }
     },
-    [userId]
+    [userId],
   );
 
   const handleDelete = useCallback(async (docId: string) => {
@@ -131,7 +133,7 @@ export default function KnowledgeBaseClient({
     try {
       const res = await fetch(
         `${API_BASE}/delete_user_document/${docId}?user_id=${userId}`,
-        { method: "DELETE" }
+        { method: "DELETE" },
       );
       if (res.ok) setDocuments((docs) => docs.filter((d) => d.id !== docId));
     } catch (e) {
@@ -169,7 +171,7 @@ export default function KnowledgeBaseClient({
             </p>
           </div>
           <div className="relative">
-            <input
+            <Input
               id="file-upload-kb"
               type="file"
               className="hidden"
@@ -182,7 +184,7 @@ export default function KnowledgeBaseClient({
               className={`inline-flex items-center justify-center w-full sm:w-auto px-4 py-2.5 rounded-lg font-semibold text-sm transition-colors ${
                 isUploading
                   ? "bg-gray-400 cursor-not-allowed text-gray-700"
-                  : "bg-red-600 hover:bg-red-700 text-white cursor-pointer"
+                  : "bg-primary-500 hover:bg-primary-700 text-white cursor-pointer"
               }`}
             >
               {isUploading ? (
@@ -284,7 +286,7 @@ export default function KnowledgeBaseClient({
             </p>
             <label
               htmlFor="file-upload-kb"
-              className="inline-flex items-center justify-center px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold text-sm cursor-pointer"
+              className="inline-flex items-center justify-center px-6 py-2.5 bg-primary-500 hover:bg-primary-700 text-white rounded-lg font-semibold text-sm cursor-pointer"
             >
               <svg
                 className="w-4 h-4 mr-2"
@@ -312,7 +314,7 @@ export default function KnowledgeBaseClient({
                 <div className="flex items-start gap-3 mb-3 sm:mb-0">
                   <div className="shrink-0 w-10 h-10 bg-red-100 dark:bg-red-900/20 rounded-lg flex items-center justify-center">
                     <svg
-                      className="w-5 h-5 text-red-600 dark:text-red-400"
+                      className="w-5 h-5 text-primary-500 dark:text-primary-400"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -333,21 +335,39 @@ export default function KnowledgeBaseClient({
                 </div>
 
                 <div className="flex gap-2 self-end sm:self-center">
-                  <button
+                  <Button
                     onClick={() => handleDownload(doc.id)}
                     className="inline-flex items-center justify-center px-3 py-1.5 sm:px-4 sm:py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs sm:text-sm font-semibold transition-colors flex-1 sm:flex-none"
                   >
                     <span className="hidden sm:inline">Download</span>
-                    <span className="sm:hidden">DL</span>
-                  </button>
-                  <button
+                    <svg
+                      className="w-6 h-6 text-gray-100 dark:text-white"
+                      aria-hidden="true"
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="24"
+                      height="24"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke="currentColor"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M12 13V4M7 14H5a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4a1 1 0 0 0-1-1h-2m-1-5-4 5-4-5m9 8h.01"
+                      />
+                    </svg>
+                    {/* <span className="sm:hidden"></span> */}
+                  </Button>
+                  <Button
                     onClick={() => handleDelete(doc.id)}
-                    className="inline-flex items-center justify-center px-3 py-1.5 sm:px-4 sm:py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs sm:text-sm font-semibold transition-colors flex-1 sm:flex-none"
+                    className="inline-flex items-center justify-center px-3 py-1.5 sm:px-4 sm:py-2 bg-primary-500 hover:bg-primary-700 text-white rounded-lg text-xs sm:text-sm font-semibold transition-colors flex-1 sm:flex-none"
                     disabled={isDeleting && pendingDeleteId === doc.id}
                   >
                     <span className="hidden sm:inline">Delete</span>
-                    <span className="sm:hidden">Del</span>
-                  </button>
+                     <Trash2 className="h-4 w-4" />
+                    {/* <span className="sm:hidden">Del</span> */}
+                  </Button>
                 </div>
               </div>
             ))}

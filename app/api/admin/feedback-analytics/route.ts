@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/database/db";
+import { feedbacks } from "@/database/schema";
+import { eq, desc } from "drizzle-orm";
 
 export async function POST(req: Request) {
   try {
@@ -24,25 +26,26 @@ export async function POST(req: Request) {
       console.log("Missing fields:", missing);
       return NextResponse.json(
         { error: `Missing required fields: ${missing.join(", ")}` },
-        { status: 400 }
+        { status: 400 },
       );
     }
-    const feedback = await prisma.feedback.create({
-      data: {
-        ai_response,
-        user_query,
-        conversation_id,
-        user_id,
-        conv_msg_id: `admin-${Date.now()}`, // Default ID for admin-submitted feedback
+    const feedback = await db
+      .insert(feedbacks)
+      .values({
+        aiResponse: ai_response,
+        userQuery: user_query,
+        conversationId: conversation_id,
+        userId: user_id,
+        convMsgId: `admin-${Date.now()}`, // Default ID for admin-submitted feedback
         thumb,
         comment,
-      },
-    });
-    return NextResponse.json({ success: true, feedback });
+      })
+      .returning();
+    return NextResponse.json({ success: true, feedback: feedback[0] });
   } catch (error) {
     return NextResponse.json(
       { error: "Failed to save feedback" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -55,21 +58,22 @@ export async function GET(req: Request) {
     if (!userId) {
       return NextResponse.json(
         { error: "User ID is required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
-    const feedbacks = await prisma.feedback.findMany({
-      where: { user_id: userId },
-      orderBy: { createdAt: "desc" },
-    });
+    const userFeedbacks = await db
+      .select()
+      .from(feedbacks)
+      .where(eq(feedbacks.userId, userId))
+      .orderBy(desc(feedbacks.createdAt));
 
-    return NextResponse.json({ feedbacks });
+    return NextResponse.json({ feedbacks: userFeedbacks });
   } catch (error) {
     console.error("Error fetching feedbacks:", error);
     return NextResponse.json(
       { error: "Failed to fetch feedbacks" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { Button } from "@/components/ui/button";
 
 type ConfirmModalProps = {
   open: boolean;
@@ -42,19 +43,21 @@ export default function ConfirmModal({
           </p>
         )}
         <div className="mt-4 flex justify-end gap-3">
-          <button
+          <Button
             onClick={onCancel}
-            className="px-4 py-2 bg-gray-100 dark:bg-zinc-800 rounded-md text-sm"
+            variant="ghost"
+            className="px-4 py-2 text-sm"
           >
             {cancelLabel}
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={() => onConfirm()}
             disabled={loading}
-            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md text-sm"
+            variant="default"
+            className="px-4 py-2 text-sm"
           >
             {loading ? "Deleting..." : confirmLabel}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
-import { Loader2, MoreHorizontal } from "lucide-react";
+import { Loader2, MoreHorizontal, Trash2 } from "lucide-react";
 
 import {
   fetchAllSystemPrompts,
@@ -10,9 +10,24 @@ import {
   setActiveSystemPrompt,
 } from "@/lib/prompts";
 import type { Prompt } from "@/types/prompt";
-import SystemPromptEditActions from "./SystemPromptActions";
 import AddNewPrompt from "./AddNewPrompt";
+import SystemPromptEditActions from "./SystemPromptActions";
 import ConfirmModal from "@/components/ui/ConfirmModal";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Button } from "../ui/button";
 
 export default function SystemPrompts() {
   const { data: session } = useSession();
@@ -22,9 +37,6 @@ export default function SystemPrompts() {
   const [showDeleteModal, setShowDeleteModal] = useState<boolean>(false);
   const [promptToDelete, setPromptToDelete] = useState<string | null>(null);
   const [activatingPrompt, setActivatingPrompt] = useState<string | null>(null);
-
-  // Track which prompt's dropdown is open
-  const [openMenuPrompt, setOpenMenuPrompt] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     if (!session?.user?.id) return;
@@ -125,12 +137,12 @@ export default function SystemPrompts() {
                 SH AI Assistance!
               </p>
             </div>
-            <button
-              className="btn-primary w-full sm:w-auto py-2.5 px-6 text-sm sm:text-base shadow-lg shadow-red-600/20"
+            <Button
+              className="btn-primary w-full sm:w-auto py-5.5 px-6 text-sm sm:text-base shadow-lg shadow-primary-500/20"
               onClick={() => setShowComponent(true)}
             >
               + New Prompt
-            </button>
+            </Button>
           </div>
         </header>
 
@@ -188,33 +200,26 @@ export default function SystemPrompts() {
                 ) : (
                   <>
                     {/* Desktop Table View */}
-                    <div className="hidden md:block overflow-x-auto">
-                      <table className="w-full table-auto border-collapse">
-                        <thead>
-                          <tr className="text-sm text-left text-gray-600 dark:text-gray-300 border-b border-gray-200 dark:border-zinc-700">
-                            <th className="py-3 px-4 font-semibold">
-                              Prompt Name
-                            </th>
-                            <th className="py-3 px-4 font-semibold">
-                              Prompt Text
-                            </th>
-                            <th className="py-3 px-4 font-semibold">Status</th>
-                            <th className="py-3 px-4 font-semibold">Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-100 dark:divide-zinc-800 dark:bg-zinc-900 shadow-lg">
+                    <div className="hidden md:block">
+                      <Table>
+                        <TableHeader >
+                          <TableRow>
+                            <TableHead className="text-black dark:text-white font-bold">Prompt Name</TableHead>
+                            <TableHead className="text-black dark:text-white font-bold">Prompt Text</TableHead>
+                            <TableHead className="text-black dark:text-white font-bold">Status</TableHead>
+                            <TableHead className="text-black dark:text-white font-bold">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
                           {systemPrompts.map((sp, index) => (
-                            <tr
-                              key={index}
-                              className="hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors"
-                            >
-                              <td className="py-4 px-4 text-sm font-medium text-slate-800 dark:text-gray-200">
+                            <TableRow key={index}>
+                              <TableCell className="font-medium text-black dark:text-white">
                                 {sp.name}
-                              </td>
-                              <td className="py-4 px-4 text-sm text-slate-700 dark:text-gray-300 max-w-lg truncate">
+                              </TableCell>
+                              <TableCell className="max-w-lg truncate text-black dark:text-white">
                                 {sp.prompt}
-                              </td>
-                              <td className="py-4 px-4 text-sm">
+                              </TableCell>
+                              <TableCell>
                                 <span
                                   className={`inline-flex items-center px-3 py-1 text-xs font-medium rounded-full ${
                                     sp.is_active
@@ -224,67 +229,59 @@ export default function SystemPrompts() {
                                 >
                                   {sp.is_active ? "Active" : "Inactive"}
                                 </span>
-                              </td>
-                              <td className="py-4 px-4 text-sm">
-                                <div className="relative">
-                                  <button
-                                    onClick={() =>
-                                      setOpenMenuPrompt((prev) =>
-                                        prev === sp.name ? null : sp.name
-                                      )
-                                    }
-                                    className="p-1 rounded hover:bg-zinc-200 dark:hover:bg-zinc-700"
-                                  >
-                                    <MoreHorizontal className="w-4 h-4 cursor-pointer" />
-                                  </button>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-2">
+                                  <SystemPromptEditActions
+                                    systemPrompt={sp}
+                                    userId={session.user.id}
+                                    onUpdate={handleOnEditUpdate}
+                                  />
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <button className="p-1 rounded bg-gray-100 hover:bg-zinc-200 dark:hover:bg-zinc-700">
+                                        <MoreHorizontal className="w-4 h-4 cursor-pointer text-black dark:text-white" />
+                                      </button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent
+                                      align="end"
+                                      className="w-48"
+                                    >
+                                      <DropdownMenuItem
+                                        disabled={
+                                          sp.is_active ||
+                                          activatingPrompt === sp.name
+                                        }
+                                        onClick={() => handleSetActive(sp.name)}
+                                        className={`${
+                                          sp.is_active
+                                            ? "cursor-not-allowed opacity-50"
+                                            : "cursor-pointer"
+                                        }`}
+                                      >
+                                        {activatingPrompt === sp.name ? (
+                                          <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                                        ) : (
+                                          <span className="mr-2">⚡</span>
+                                        )}
+                                        {sp.is_active ? "Active" : "Activate"}
+                                      </DropdownMenuItem>
 
-                                  {openMenuPrompt === sp.name && (
-                                    <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg shadow-xl z-9999 py-2">
-                                      <div className="flex flex-col gap-2 px-2">
-                                        <SystemPromptEditActions
-                                          systemPrompt={sp}
-                                          userId={session.user.id}
-                                          onUpdate={handleOnEditUpdate}
-                                        />
-
-                                        <button
-                                          className={`px-3 py-1.5 rounded text-xs font-semibold transition-colors flex items-center justify-center gap-1 ${
-                                            sp.is_active
-                                              ? "bg-gray-300 text-gray-500 cursor-not-allowed dark:bg-gray-700 dark:text-gray-500"
-                                              : "bg-red-600 text-white hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800"
-                                          }`}
-                                          disabled={
-                                            sp.is_active ||
-                                            activatingPrompt === sp.name
-                                          }
-                                          onClick={() =>
-                                            handleSetActive(sp.name)
-                                          }
-                                        >
-                                          {activatingPrompt === sp.name ? (
-                                            <Loader2 className="w-3 h-3 animate-spin" />
-                                          ) : sp.is_active ? (
-                                            "Active"
-                                          ) : (
-                                            "Activate"
-                                          )}
-                                        </button>
-
-                                        <button
-                                          className="px-3 py-1.5 rounded text-xs font-semibold bg-red-700 hover:bg-red-800 text-white dark:bg-red-800 dark:hover:bg-red-900 transition-colors"
-                                          onClick={() => handleDelete(sp.name)}
-                                        >
-                                          Delete
-                                        </button>
-                                      </div>
-                                    </div>
-                                  )}
+                                      <DropdownMenuItem
+                                        onClick={() => handleDelete(sp.name)}
+                                        className="text-red-600 dark:text-red-400 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950"
+                                      >
+                                        <Trash2 className="w-4 h-4 mr-2" />
+                                        Delete
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
                                 </div>
-                              </td>
-                            </tr>
+                              </TableCell>
+                            </TableRow>
                           ))}
-                        </tbody>
-                      </table>
+                        </TableBody>
+                      </Table>
                     </div>
 
                     {/* Mobile Card View */}
@@ -322,37 +319,51 @@ export default function SystemPrompts() {
                             </div>
 
                             <div className="pt-3 border-t border-gray-200 dark:border-zinc-700">
-                              <div className="flex flex-wrap gap-2">
+                              <div className="flex gap-2">
                                 <SystemPromptEditActions
                                   systemPrompt={sp}
                                   userId={session.user.id}
                                   onUpdate={handleOnEditUpdate}
                                 />
-                                <button
-                                  className={`flex-1 px-3 py-2 rounded text-xs font-semibold transition-colors flex items-center justify-center gap-1 ${
-                                    sp.is_active
-                                      ? "bg-gray-300 text-gray-500 cursor-not-allowed dark:bg-gray-700 dark:text-gray-500"
-                                      : "bg-red-600 text-white hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800"
-                                  }`}
-                                  disabled={
-                                    sp.is_active || activatingPrompt === sp.name
-                                  }
-                                  onClick={() => handleSetActive(sp.name)}
-                                >
-                                  {activatingPrompt === sp.name ? (
-                                    <Loader2 className="w-3 h-3 animate-spin" />
-                                  ) : sp.is_active ? (
-                                    "Active"
-                                  ) : (
-                                    "Activate"
-                                  )}
-                                </button>
-                                <button
-                                  className="flex-1 px-3 py-2 rounded text-xs font-semibold bg-red-700 hover:bg-red-800 text-white dark:bg-red-800 dark:hover:bg-red-900 transition-colors"
-                                  onClick={() => handleDelete(sp.name)}
-                                >
-                                  Delete
-                                </button>
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <button className="flex-1 px-3 py-2 rounded text-xs font-semibold bg-gray-100 hover:bg-gray-200 dark:bg-zinc-700 dark:hover:bg-zinc-600 transition-colors flex items-center justify-center gap-2">
+                                      <MoreHorizontal className="w-4 h-4 text-black dark:text-white"/>
+                                    </button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent
+                                    align="end"
+                                    className="w-48"
+                                  >
+                                    <DropdownMenuItem
+                                      disabled={
+                                        sp.is_active ||
+                                        activatingPrompt === sp.name
+                                      }
+                                      onClick={() => handleSetActive(sp.name)}
+                                      className={`${
+                                        sp.is_active
+                                          ? "cursor-not-allowed opacity-50"
+                                          : "cursor-pointer"
+                                      }`}
+                                    >
+                                      {activatingPrompt === sp.name ? (
+                                        <Loader2 className="w-4 h-4 animate-spin mr-2 text-black dark:text-white" />
+                                      ) : (
+                                        <span className="mr-2">⚡</span>
+                                      )}
+                                      {sp.is_active ? "Active" : "Activate"}
+                                    </DropdownMenuItem>
+
+                                    <DropdownMenuItem
+                                      onClick={() => handleDelete(sp.name)}
+                                      className="text-red-600 dark:text-red-400 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950"
+                                    >
+                                      <span className="mr-2">🗑️</span>
+                                      Delete
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
                               </div>
                             </div>
                           </div>

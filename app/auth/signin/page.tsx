@@ -6,6 +6,14 @@ import { useEffect, useState, useCallback } from "react";
 import Image from "next/image";
 import Footer from "@/components/Footer";
 import { Eye, EyeOff } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 
 import lightLogo from "@/public/SH-Logos.png";
 import darkLogo from "@/public/SH-Logos-1.png";
@@ -14,7 +22,7 @@ export default function SignInPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const searchParams = new URLSearchParams(
-    typeof window !== "undefined" ? window.location.search : ""
+    typeof window !== "undefined" ? window.location.search : "",
   );
   const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
   const [isLoading, setIsLoading] = useState(false);
@@ -55,7 +63,7 @@ export default function SignInPage() {
         setIsLoading(false);
       }
     },
-    [email, password, router, callbackUrl]
+    [email, password, router, callbackUrl],
   );
 
   return (
@@ -88,7 +96,7 @@ export default function SignInPage() {
               <h1 className="text-4xl text-center sm:text-5xl font-extrabold text-black dark:text-white">
                 Smart SH AI Assistant
               </h1>
-              <p className="mt-3 text-center text-base text-red-600 dark:text-red-500 font-semibold">
+              <p className="mt-3 text-center text-base text-primary-500 dark:text-primary-500 font-semibold">
                 Secure. Smart. Intelligent.
               </p>
               <p className="mt-2 text-gray-600 dark:text-gray-400">
@@ -114,51 +122,58 @@ export default function SignInPage() {
                 </p>
               </div>
 
-              <form onSubmit={handleEmailAuth} className="space-y-4">
-                <div>
-                  <label
-                    htmlFor="email"
-                    className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-                  >
-                    Email
-                  </label>
-                  <input
-                    id="email"
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-700 rounded-md focus:outline-none focus:ring-2 focus:ring-red-600 bg-white dark:bg-zinc-800 text-gray-900 dark:text-white"
-                    placeholder="you@example.com"
-                  />
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="password"
-                    className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-                  >
-                    Password
-                  </label>
-                  <div className="relative">
-                    <input
-                      id="password"
-                      type={showPassword ? "text" : "password"}
-                      required
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="w-full px-3 py-2 pr-10 border border-gray-300 dark:border-zinc-700 rounded-md focus:outline-none focus:ring-2 focus:ring-red-600 bg-white dark:bg-zinc-800 text-gray-900 dark:text-white"
-                      placeholder="Your password"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors"
+              <form onSubmit={handleEmailAuth} className="space-y-6">
+                <FieldGroup>
+                  <Field>
+                    <FieldLabel
+                      htmlFor="fieldgroup-email"
+                      className="text-sm font-medium text-gray-700 dark:text-gray-300"
                     >
-                      {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                    </button>
-                  </div>
-                </div>
+                      Email
+                    </FieldLabel>
+                    <Input
+                      id="fieldgroup-email"
+                      type="email"
+                      placeholder="name@example.com"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="mt-1 text-black"
+                    />
+                  </Field>
+                  <Field>
+                    <FieldLabel
+                      htmlFor="fieldgroup-password"
+                      className="text-sm font-medium text-gray-700 dark:text-gray-300"
+                    >
+                      Password
+                    </FieldLabel>
+                    <div className="relative mt-1">
+                      <Input
+                        id="fieldgroup-password"
+                        type={showPassword ? "text" : "password"}
+                        placeholder="Your password"
+                        required
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="pr-10 text-black"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute inset-y-0 right-0 h-full px-3 py-2 hover:bg-transparent"
+                        onClick={() => setShowPassword(!showPassword)}
+                      >
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4 text-gray-400" />
+                        ) : (
+                          <Eye className="h-4 w-4 text-gray-400" />
+                        )}
+                      </Button>
+                    </div>
+                  </Field>
+                </FieldGroup>
 
                 {error && (
                   <div className="p-3 rounded-md bg-red-50 dark:bg-red-900/20">
@@ -168,13 +183,14 @@ export default function SignInPage() {
                   </div>
                 )}
 
-                <button
+                <Button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  variant="signout"
+                  className="w-full"
                 >
                   {isLoading ? "Signing in..." : "Sign In"}
-                </button>
+                </Button>
               </form>
 
               <div className="mt-6 text-center text-sm text-gray-600 dark:text-gray-400">
